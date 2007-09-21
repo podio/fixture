@@ -192,7 +192,14 @@ def is_row_class(attr):
     return ((attr_type==types.ClassType or attr_type==type) and 
                 attr.__name__ != 'Meta' and 
                 not issubclass(attr, DataContainer.Meta))
-    
+
+class UnloadedRowType(type):
+    def __getattr__(self, name):
+        clsname = self.__name__
+        clspath = "%s.%s" % (clsname, name)
+        raise ValueError('yippee')
+        raise AttributeError("class %s has no attribute '%s'" % name)
+
 class DataType(type):
     """meta class for creating DataSet classes."""
     default_primary_key = ['id']
@@ -220,6 +227,7 @@ class DataType(type):
         
         # fix inherited primary keys
         names_to_uninherit = []
+        attributes = {}
         for name in dir(row):
             if name in cls_attr['_primary_key']:
                 if name not in row.__dict__:
@@ -227,6 +235,8 @@ class DataType(type):
                     # without 1) disturbing the other inherited values and 2) 
                     # disturbing the inherited class.  is this nuts?
                     names_to_uninherit.append(name)
+            else:
+                attributes[name] = getattr(row, name)
         bases_to_replace = []
         if names_to_uninherit:
             base_pos = 0
@@ -237,6 +247,9 @@ class DataType(type):
                         # just need to detect one attribute...
                         break
                 base_pos += 1
+        
+        ### FIXME
+        
         new_bases = [b for b in row.__bases__]
         for base_c, base_pos in bases_to_replace:
             # this may not work if the row's base was a new-style class
@@ -246,10 +259,9 @@ class DataType(type):
                                     if not k.startswith('_') and \
                                     k not in names_to_uninherit]))
             new_bases[base_pos] = new_base
-        if new_bases:
-            row.__bases__ = tuple(new_bases)
-            
-                    
+        
+        # replace the row : 
+        setattr(cls, name, UnloadedRowType(name, tuple(new_bases), attributes))
 
 class DataRow(object):
     """a DataSet row, values accessible by attibute or key."""

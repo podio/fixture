@@ -111,6 +111,21 @@ class TestDataSet(DataSetTest):
         else:
             raise ValueError("unexpected row %s, count %s" % (items, count))
 
+@attr(unit=1)
+def test_DataSet_explains_how_to_properly_access_id():
+    class FooData(DataSet):
+        class foo:
+            name = 'foo'
+    try:
+        FooData.foo.id
+    except AttributeError, e:
+        eq_(str(e), (
+            "FooData.foo.id is only available after the DataSet is loaded.  "
+            "Then, you will need to access it from a loaded data object "
+            "instead, like: data.FooData.foo.id, or the equivalent."))
+    else:
+        raise AssertionError("expected AttributeError to be raised")
+
 class TestDataTypeDrivenDataSet(TestDataSet):
     def setUp(self):
         class Books(DataSet):
