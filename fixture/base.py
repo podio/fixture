@@ -1,10 +1,12 @@
 
 """Base Fixture components.
 
-The more useful bits are in LoadableFixture
+These are for internal use mostly.  The more useful bits are in LoadableFixture
 
 """
 import sys, traceback
+import inspect
+from types import ModuleType
 try:
     from functools import wraps
 except ImportError:
@@ -18,7 +20,7 @@ except ImportError:
             return new_f
         return wrap_with_f
         
-from fixture.dataset import SuperSet
+from fixture.dataset import SuperSet, DataType, DataSet
 from compiler.consts import CO_GENERATOR
 
 def is_generator(func):
@@ -49,11 +51,15 @@ class Fixture(object):
     loader = None
     
     class Data(object):
-        """loads one or more DataSet objects and provides an interface into that 
+        """Loads one or more DataSet objects and provides an interface into that 
         data.    
+        
+        In addition to DataSet classes, one can pass in a module containing 
+        DataSet classes
         """
-        def __init__(self, datasets, dataclass, loader):
-            self.datasets = datasets
+        def __init__(self, datasets_or_modules, dataclass, loader):
+            self.datasets = [ds for ds in 
+                            self._expand_datasets(datasets_or_modules)]
             self.dataclass = dataclass
             self.loader = loader
             self.data = None # instance of dataclass
@@ -80,6 +86,32 @@ class Fixture(object):
         def __getitem__(self, name):
             """self['name'] is self.data['name']"""
             return self.data[name]
+        
+        def _get_datasets(self, names_and_objects):
+            for name, obj in names_and_objects:
+                if type(obj)==DataType and obj is not DataSet:
+                    yield obj
+        
+        def _expand_datasets(self, datasets_or_modules):
+            for obj in datasets_or_modules:
+                otype = type(obj)
+                if otype is DataType:
+                    yield obj
+                elif otype is ModuleType:
+                    mod = obj
+                    if hasattr(mod, '__all__'):
+                        for ds in self._get_datasets(
+                                [(a, getattr(mod, a)) for a in mod.__all__]):
+                            yield ds
+                    else:
+                        for ds in self._get_datasets(inspect.getmembers(mod)):
+                            yield ds
+                else:
+                    raise TypeError(
+                        "%s object can only be loaded with DataSet classes or "
+                        "modules containing DataSet classes.  "
+                        "Got: %s, type: %s" % (
+                            self.__class__.__name__, obj, otype))
     
         def setup(self):
             """load all datasets, populating self.data."""

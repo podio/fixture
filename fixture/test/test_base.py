@@ -1,10 +1,11 @@
 
 from cStringIO import StringIO
-import sys
+import sys, imp
 import nose.tools, nose.case, nose.loader
 from nose.tools import eq_, raises
 from fixture.test import attr, SilentTestRunner
 from fixture.base import Fixture
+from fixture import DataSet
 
 mock_call_log = []
 
@@ -31,8 +32,14 @@ class StubDataset:
     @classmethod
     def shared_instance(self, *a, **kw):
         return self()
-class StubDataset1(StubDataset): pass
-class StubDataset2(StubDataset): pass
+class StubDataset1(StubDataset, DataSet):
+    class context:
+        col1 = '1'
+        col2 = '2'
+class StubDataset2(StubDataset, DataSet):
+    class context:
+        col1 = '1'
+        col2 = '2'
     
 class TestFixture:
     def setUp(self):
@@ -240,4 +247,69 @@ class TestFixture:
         eq_(mock_call_log[-3], ('some_callable', Fixture.Data))
         eq_(mock_call_log[-2], (MockLoader, 'unload'))
         eq_(mock_call_log[-1], 'my_custom_teardown')
+
+
+class FooData(DataSet):
+    class context:
+        row1 = 'val1'
+        row2 = 'val2'
+
+class BarData(DataSet):
+    class context:
+        row1 = 'val1'
+        row2 = 'val2'
+        
+class BazData(DataSet):
+    class context:
+        row1 = 'val1'
+        row2 = 'val2'
+
+class DataImposter:
+    # not a data set
+    pass
+        
+class TestFixtureData:
+    def setUp(self):
+        self.stub_dataclass = None
+        self.stub_loader = None
+        
+    @attr(unit=1)
+    def test_data_accepts_datasets(self):
+        d = Fixture.Data(
+            [FooData, BarData, BazData], self.stub_dataclass, self.stub_loader)
+        eq_(d.datasets[0], FooData)
+        eq_(d.datasets[1], BarData)
+        eq_(d.datasets[2], BazData)
+    
+    @raises(TypeError)
+    @attr(unit=1)
+    def test_data_accepts_only_datasets_or_modules(self):
+        d = Fixture.Data(
+            [FooData, DataImposter, BarData, BazData], 
+            self.stub_dataclass, self.stub_loader)
+        
+    @attr(unit=1)
+    def test_data_accepts_modules(self):
+        module_o_data = imp.new_module('%s.module_o_data' % __name__)
+        module_o_data.BazData = BazData
+        module_o_data.BarData = BarData
+        module_o_data.DataImposter = DataImposter # should be ignored
+        d = Fixture.Data(
+            [FooData, module_o_data], self.stub_dataclass, self.stub_loader)
+        eq_(d.datasets[0], FooData)
+        eq_(d.datasets[1], BarData)
+        eq_(d.datasets[2], BazData)
+        eq_(len(d.datasets), 3)
+        
+    @attr(unit=1)
+    def test_data_favors_module__all__(self):
+        module_o_data = imp.new_module('%s.module_o_data' % __name__)
+        module_o_data.BarData = BarData
+        module_o_data.BazData = BazData
+        module_o_data.FooData = FooData
+        module_o_data.__all__ = ['BazData', 'BarData']
+        d = Fixture.Data([module_o_data], self.stub_dataclass, self.stub_loader)
+        eq_(d.datasets[0], BazData)
+        eq_(d.datasets[1], BarData)
+        eq_(len(d.datasets), 2)
         
