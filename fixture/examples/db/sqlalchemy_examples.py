@@ -224,8 +224,13 @@ def setup_db(meta, session_context, **kw):
         table.create(meta.engine, checkfirst=checkfirst)
     
     assign_and_create(Category, categories)
-    assign_and_create(Product, products)
-    assign_and_create(Offer, offers)
+    assign_and_create(Product, products, properties={
+        'category': relation(Category)
+    })
+    assign_and_create(Offer, offers, properties={
+        'category': relation(Category),
+        'product': relation(Product)
+    })
 
 def teardown_db(meta, session_context):
     import sqlalchemy

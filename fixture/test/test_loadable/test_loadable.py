@@ -45,16 +45,16 @@ class LoadableTest(object):
     def test_DataTestCase(self):
         from fixture import DataTestCase
         import unittest
-        driver = self
+        inspector = self
         class ns:
             tested = False
         
         class SomeDataTestCase(DataTestCase, unittest.TestCase):
-            fixture = driver.fixture
-            datasets = driver.datasets()
+            fixture = inspector.fixture
+            datasets = inspector.datasets()
             def test_data_test(self):
                 ns.tested = True
-                driver.assert_data_loaded(self.data)
+                inspector.assert_data_loaded(self.data)
         
         res = PrudentTestResult()
         loader = unittest.TestLoader()
@@ -66,7 +66,7 @@ class LoadableTest(object):
         eq_(res.testsRun, 1)
         eq_(ns.tested, True)
         
-        self.assert_data_torndown()
+        inspector.assert_data_torndown()
     
     def test_with_data(self):
         """test @fixture.with_data"""
