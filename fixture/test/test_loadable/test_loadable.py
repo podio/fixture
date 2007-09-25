@@ -181,6 +181,8 @@ class HavingOfferProductAsDataType:
                 id = 2
                 name = 'get free stuff'
         
+        ## FIXME: replace all instances of 
+        ## foo_id with foo ... that is, we need refs to data sets
         class ProductData(DataSet):
             class truck:
                 id = 1

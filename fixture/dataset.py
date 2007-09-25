@@ -143,7 +143,20 @@ class DataContainer(object):
         
 
 class Ref(object):
-    """A reference to a row in a DataSet class."""
+    """A reference to a row in a DataSet class.
+    
+    This allows a DataSet to reference an id column of a "foreign key" DataSet 
+    before it exists.
+    
+    Ref is a Descriptor containing a deferred value to an attribute of a data 
+    object (like an instance of a SQLAlchemy mapped class).  It provides the 
+    DataSet a way to cloak the fact that "id" is an attribute only populated 
+    after said data object is saved to the database.  In other words, the 
+    DataSet doesn't know or care when it has been loaded or not.  It thinks it 
+    is referencing "id" all the same.  The timing of when id is accessed is 
+    handled by the LoadableFixture.
+    
+    """
     class Value(object):
         """A reference to a value in a row of a DataSet class."""
         def __init__(self, ref, attr_name):

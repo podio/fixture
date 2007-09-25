@@ -225,10 +225,10 @@ def setup_db(meta, session_context, **kw):
     
     assign_and_create(Category, categories)
     assign_and_create(Product, products, properties={
-        'category': relation(Category)
+        'category': relation(Category),
     })
     assign_and_create(Offer, offers, properties={
-        'category': relation(Category),
+        'category': relation(Category, backref='products'),
         'product': relation(Product)
     })
 
