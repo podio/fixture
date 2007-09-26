@@ -154,8 +154,7 @@ def test_is_rowlike():
     
     eq_(is_rowlike(StubDataSet.some_row), True)
     eq_(is_rowlike(StubDataSetNewStyle.some_row), True)
-    stub_dataset = {}
-    eq_(is_rowlike(DataRow(stub_dataset)), True)
+    eq_(is_rowlike(DataRow(StubDataSet)), True)
     
     class StubRow:
         pass
