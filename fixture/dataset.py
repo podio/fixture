@@ -307,8 +307,8 @@ class DataRow(object):
             yield k
     
     def __setattr__(self, name, val):
-        raise AttributeError("cannot set attributes on a %s instance" % (
-                                                self.__class__.__name__))
+        raise AttributeError("cannot set new attributes on a %s instance" % (
+                                                    self.__class__.__name__))
 
 class DataSetStore(list):
     """keeps track of actual objects stored in a dataset."""
@@ -511,7 +511,11 @@ class DataSet(DataContainer):
                 if name.startswith("_"):
                     continue
                 yield name
-                
+        
+        def add_ref_from_rowlike(rowlike):
+            if rowlike._dataset not in self.meta.references:
+                self.meta.references.append(rowlike._dataset)
+                    
         empty = True
         for name in public_dir(self.__class__):
             val = getattr(self.__class__, name)
@@ -527,16 +531,23 @@ class DataSet(DataContainer):
                 col_val = getattr(row_class, col_name)
                 
                 if isinstance(col_val, Ref):
+                    # the .ref attribute
                     continue
-                if isinstance(col_val, Ref.Value):
+                elif type(col_val) in (types.ListType, types.TupleType):
+                    for c in col_val:
+                        if is_rowlike(c):
+                            add_ref_from_rowlike(c)
+                        else:
+                            raise TypeError(
+                                "unsupported type, %s, for multi-value "
+                                "column: %s" % (type(col_val), col_val))
+                elif is_rowlike(col_val):
+                    add_ref_from_rowlike(col_val)
+                elif isinstance(col_val, Ref.Value):
                     ref = col_val.ref
                     if ref.dataset_class not in self.meta.references:
                         # store the reference:
                         self.meta.references.append(ref.dataset_class)
-                        
-                    ### FIXME: with __get__ this will
-                    ### just be the Ref.Value object ...
-                    # col_val = getattr(ref.row, col_val.attr_name)
                     
                 row[col_name] = col_val
             yield (key, row)

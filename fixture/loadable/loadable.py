@@ -306,7 +306,7 @@ import sys
 from fixture.base import Fixture
 from fixture.util import ObjRegistry, _mklog
 from fixture.style import OriginalStyle
-from fixture.dataset import Ref, dataset_registry, DataRow
+from fixture.dataset import Ref, dataset_registry, DataRow, is_rowlike
 from fixture.exc import LoadError, UnloadError
 import logging
 
@@ -340,8 +340,8 @@ class LoadableFixture(Fixture):
     style = OriginalStyle()
     dataclass = Fixture.dataclass
     
-    def __init__(self, style=None, medium=None, dataclass=None):
-        Fixture.__init__(self, loader=self, dataclass=dataclass)
+    def __init__(self, style=None, medium=None, **kw):
+        Fixture.__init__(self, loader=self, **kw)
         if style:
             self.style = style
         if medium:
@@ -465,8 +465,8 @@ class LoadableFixture(Fixture):
                 
                 treelog.info("%s. %s", level, verbose_obj)
     
-    def attach_storage_medium(self):
-        pass
+    def attach_storage_medium(self, ds):
+        raise NotImplementedError
     
     def begin(self, unloading=False):
         if not unloading:
@@ -514,14 +514,7 @@ class LoadableFixture(Fixture):
         ds.meta.storage_medium.visit_loader(self)
         for key, row in ds:
             try:
-                # resolve this row's referenced values :
-                for k in row.columns():
-                    v = getattr(row, k)
-                    if isinstance(v, Ref.Value):
-                        ref = v.ref
-                        ref.dataset_obj = self.loaded[ref.dataset_class]
-                        isref=True
-                
+                self.resolve_row_references(row)
                 if not isinstance(row, DataRow):
                     row = row(ds)
                 obj = ds.meta.storage_medium.save(row)
@@ -534,6 +527,24 @@ class LoadableFixture(Fixture):
                 raise LoadError(etype, val, ds, key=key, row=row), None, tb
         
         self.loaded.register(ds, level)
+    
+    def resolve_row_references(self, row):        
+        """resolve this DataRow object's referenced values.
+        
+        return a row to replace the first one.  
+        by default it will return itself.
+        """            
+        for k in row.columns():
+            v = getattr(row, k)
+            if is_rowlike(v):
+                loaded_ds = self.loaded[v._dataset]
+                setattr(row, k, 
+                    loaded_ds.meta._stored_objects.get_object(v.__name__))
+            if isinstance(v, Ref.Value):
+                ref = v.ref
+                # now the ref will return the attribute from a stored object 
+                # when __get__ is invoked
+                ref.dataset_obj = self.loaded[ref.dataset_class]
     
     def rollback(self):
         raise NotImplementedError

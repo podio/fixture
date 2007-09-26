@@ -4,8 +4,10 @@ from nose.tools import raises, eq_
 from nose.exc import SkipTest
 import unittest
 from fixture import DataSet
-from fixture.loadable import LoadableFixture, EnvLoadableFixture
-from fixture.test import env_supports, PrudentTestResult
+from fixture.loadable import (
+    LoadableFixture, EnvLoadableFixture, DBLoadableFixture)
+from fixture.test import attr, env_supports, PrudentTestResult
+from fixture.style import NamedDataStyle
 from fixture import TempIO
 
 def exec_if_supported(code, globals={}, locals={}):
@@ -294,4 +296,84 @@ class TestEnvLoadableFixture(object):
         efixture = SomeEnvLoadableFixture(env={'MyDataSet': MyDataSet})
         data = efixture.data(MyDataSet)
         data.setup()
+        
+class StubLoadableFixture(DBLoadableFixture):
+    def create_transaction(self):
+        class NoTrans:
+            def commit(self): pass
+        return NoTrans()
+
+class MockStorageMedium(DBLoadableFixture.StorageMediumAdapter):
+    def save(self, row):                
+        obj = self.medium()
+        for c in row.columns():
+            val = getattr(row, c)
+            setattr(obj, c, val)
+        obj.save()
+        return obj
+
+class TestDBLoadableRowReferences(object):
+    @attr(unit=True)
+    def test_row_column_refs_are_resolved(self):
+        calls = []
+        class MockDataObject(object):
+            def save(self):
+                calls.append((self.__class__, 'save'))
+        class Person(MockDataObject):
+            name = None
+        class Pet(MockDataObject):
+            owner_name = None
+        class PersonData(DataSet):
+            class bob:
+                name = "Bob B. Chillingsworth"
+        class PetData(DataSet):
+            class fido:
+                owner_name = PersonData.bob.ref('name')
+            
+        ldr = StubLoadableFixture(
+            style=NamedDataStyle(), medium=MockStorageMedium, env=locals())
+        ldr.begin()
+        ldr.load_dataset(PetData())
+        
+        eq_(calls[0], (Person, 'save'))
+        eq_(calls[1], (Pet, 'save'))
+        
+        bob_db_obj = \
+            ldr.loaded[PersonData].meta._stored_objects.get_object('bob')
+        eq_(bob_db_obj.name, PersonData.bob.name)
+        fido_db_obj = \
+            ldr.loaded[PetData].meta._stored_objects.get_object('fido')
+        eq_(fido_db_obj.owner_name, PersonData.bob.name)
+        
+    @attr(unit=True)
+    def test_row_refs_are_resolved(self):
+        calls = []
+        class MockDataObject(object):
+            def save(self):
+                calls.append((self.__class__, 'save'))
+        class Person(MockDataObject):
+            name = None
+        class Pet(MockDataObject):
+            owner = None
+        class PersonData(DataSet):
+            class bob:
+                name = "Bob B. Chillingsworth"
+        class PetData(DataSet):
+            class fido:
+                owner = PersonData.bob
+            
+        ldr = StubLoadableFixture(
+            style=NamedDataStyle(), medium=MockStorageMedium, env=locals())
+        ldr.begin()
+        ldr.load_dataset(PetData())
+        
+        eq_(calls[0], (Person, 'save'))
+        eq_(calls[1], (Pet, 'save'))
+        
+        bob_db_obj = \
+            ldr.loaded[PersonData].meta._stored_objects.get_object('bob')
+        eq_(bob_db_obj.name, PersonData.bob.name)
+        fido_db_obj = \
+            ldr.loaded[PetData].meta._stored_objects.get_object('fido')
+        eq_(fido_db_obj.owner, bob_db_obj)
         

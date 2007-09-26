@@ -77,11 +77,11 @@ class DataSetTest:
     def assert_itered_n_times(count):
         raise NotImplementedError
     
-    @attr(unit=1)
+    @attr(unit=True)
     def test_access(self):
         self.assert_access(self.dataset)
 
-    @attr(unit=1)
+    @attr(unit=True)
     def test_iter_yields_keys_rows(self):
         count=0
         for k, row in self.dataset:
@@ -129,7 +129,7 @@ class TestDataTypeDrivenDataSet(TestDataSet):
         self.dataset_class = Books
         self.dataset = Books()
 
-    @attr(unit=1)
+    @attr(unit=True)
     def test_row_is_decorated_with_ref(self):
         assert hasattr(self.dataset_class.lolita, 'ref'), (
             "expected %s to be decorated with a ref method" % 
@@ -138,12 +138,12 @@ class TestDataTypeDrivenDataSet(TestDataSet):
             "unexpected ref class: %s" % 
             self.dataset_class.lolita.ref.__class__)
     
-    @attr(unit=1)
+    @attr(unit=True)
     def test_row_is_rowlike(self):
         assert is_rowlike(self.dataset_class.lolita), (
             "expected %s to be rowlike" % self.dataset_class.lolita)
 
-@attr(unit=1)
+@attr(unit=True)
 def test_is_rowlike():
     class StubDataSet(DataSet):
         class some_row:
@@ -318,12 +318,8 @@ class TestMergedSuperSet(SuperSetTest):
         eq_(self.superset['pi'].title, 'life of pi')
         eq_(self.superset.peewee.director, 'Tim Burton')
         eq_(self.superset.aquatic.director, 'cant remember his name')
-        
-class TestComplexRefs:
-    def setUp(self):
-        self.offer_data = OfferData()
-        self.product_data = ProductData()
-    
+
+class ComplexRefTest:
     @attr(unit=True)
     def test_construction(self):
         eq_(self.offer_data.meta.references, [CategoryData, ProductData])
@@ -331,5 +327,69 @@ class TestComplexRefs:
         
         cat_data = self.product_data.meta.references[0]()
         eq_(cat_data.meta.references, [])
-        
         eq_([c.__class__ for c in self.product_data.ref], [CategoryData])
+        
+class TestComplexRefs(ComplexRefTest):
+    def setUp(self):
+        self.offer_data = OfferData()
+        self.product_data = ProductData()
+        
+class ProductObj(DataSet):
+    class truck:
+        category_id = CategoryData.vehicles
+    class spaceship:
+        category_id = CategoryData.vehicles
+        
+class OfferObj(DataSet):
+    class free_truck:
+        product = ProductData.truck
+        category = CategoryData.free_stuff
+    class discounted_spaceship:
+        product = ProductData.spaceship
+        category = CategoryData.discounted
+
+class TestComplexRefsToObjects(ComplexRefTest):
+    def setUp(self):
+        self.offer_data = OfferObj()
+        self.product_data = ProductObj()
+        
+        
+class ProductObjList(DataSet):
+    class truck:
+        categories = [CategoryData.vehicles]
+    class spaceship:
+        categories = [CategoryData.vehicles]
+
+class OfferObjList(DataSet):
+    class free_truck:
+        products = [ProductData.truck]
+        categories = [CategoryData.free_stuff]
+    class discounted_spaceship:
+        products = [ProductData.spaceship]
+        categories = [CategoryData.discounted]
+        
+class TestComplexRefsToListsOfObjects(ComplexRefTest):
+    def setUp(self):
+        self.offer_data = OfferObjList()
+        self.product_data = ProductObjList()
+        
+        
+class ProductObjTuple(DataSet):
+    class truck:
+        categories = tuple([CategoryData.vehicles])
+    class spaceship:
+        categories = tuple([CategoryData.vehicles])
+
+class OfferObjTuple(DataSet):
+    class free_truck:
+        products = tuple([ProductData.truck])
+        categories = tuple([CategoryData.free_stuff])
+    class discounted_spaceship:
+        products = tuple([ProductData.spaceship])
+        categories = tuple([CategoryData.discounted])
+        
+class TestComplexRefsToTuplesOfObjects(ComplexRefTest):
+    def setUp(self):
+        self.offer_data = OfferObjTuple()
+        self.product_data = ProductObjTuple()
+        
