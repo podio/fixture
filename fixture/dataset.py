@@ -319,10 +319,6 @@ class DataRow(object):
             if k.startswith('_') or k in self._reserved_attr:
                 continue
             yield k
-    
-    def __setattr__(self, name, val):
-        raise AttributeError("cannot set new attributes on a %s instance" % (
-                                                    self.__class__.__name__))
 
 class DataSetStore(list):
     """keeps track of actual objects stored in a dataset."""
@@ -463,14 +459,23 @@ class DataSet(DataContainer):
         if not default_refclass:
             default_refclass = SuperSet
         
-        def mkref(references):
+        def mkref():
+            clean_refs = []
+            for ds in iter(self.meta.references):
+                if ds is type(self):
+                    # whoops
+                    continue
+                clean_refs.append(ds)
+            self.meta.references = clean_refs
+            
             return default_refclass(*[
-                        ds.shared_instance(default_refclass=default_refclass) \
-                            for ds in iter(references)])
+                ds.shared_instance(default_refclass=default_refclass) 
+                    for ds in iter(self.meta.references)
+            ])
         
         # data def style classes, so they have refs before data is walked
         if len(self.meta.references) > 0:
-            self.ref = mkref(self.meta.references)
+            self.ref = mkref()
             
         for key, data in self.data():
             if key in self:
@@ -486,7 +491,7 @@ class DataSet(DataContainer):
             
         if not self.ref:
             # type style classes, since refs were discovered above
-            self.ref = mkref(self.meta.references)
+            self.ref = mkref()
     
     def __iter__(self):
         for key in self.meta.keys:
@@ -554,7 +559,8 @@ class DataSet(DataContainer):
                         else:
                             raise TypeError(
                                 "multi-value columns can only contain "
-                                "rowlike objects, not %s" % col_val)
+                                "rowlike objects, not %s of type %s" % (
+                                                col_val, type(col_val)))
                 elif is_rowlike(col_val):
                     add_ref_from_rowlike(col_val)
                 elif isinstance(col_val, Ref.Value):

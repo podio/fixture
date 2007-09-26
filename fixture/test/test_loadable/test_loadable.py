@@ -304,11 +304,10 @@ class StubLoadableFixture(DBLoadableFixture):
         return NoTrans()
 
 class MockStorageMedium(DBLoadableFixture.StorageMediumAdapter):
-    def save(self, row):                
+    def save(self, row, column_vals):                
         obj = self.medium()
-        for c in row.columns():
-            val = getattr(row, c)
-            setattr(obj, c, val)
+        for k,v in column_vals:
+            setattr(obj, k, v)
         obj.save()
         return obj
 
@@ -413,3 +412,31 @@ class TestDBLoadableRowReferences(object):
             ldr.loaded[PetData].meta._stored_objects.get_object('fido')
         eq_(fido_db_obj.owners, [bob_db_obj, stacy_db_obj])
         
+    @attr(unit=True)
+    def test_DataSet_cannot_ref_self(self):
+        class MockDataObject(object):
+            def save(self): 
+                pass
+        class Person(MockDataObject):
+            name = None
+            def __repr__(self):
+                return "<Person %s>" % self.name
+        class PersonData(DataSet):
+            class bob:
+                name = "Bob B. Chillingsworth"
+                friend = None
+            class jenny:
+                name = "Jenny Ginetti"
+            jenny.friend = bob
+            
+        ldr = StubLoadableFixture(
+            style=NamedDataStyle(), medium=MockStorageMedium, env=locals())
+        ldr.begin()
+        # was raising load error because the object was getting stored :
+        ldr.load_dataset(PersonData())
+        
+        bob_db_obj = \
+            ldr.loaded[PersonData].meta._stored_objects.get_object('bob')
+        jenny_db_obj = \
+            ldr.loaded[PersonData].meta._stored_objects.get_object('jenny')
+        eq_(jenny_db_obj.friend, bob_db_obj)

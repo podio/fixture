@@ -394,4 +394,19 @@ class TestComplexRefsToTuplesOfObjects(ComplexRefTest):
     def setUp(self):
         self.offer_data = OfferObjTuple()
         self.product_data = ProductObjTuple()
+
+@attr(unit=True)
+def test_DataSet_cant_add_refs_to_self():
+    class Pals(DataSet):
+        class henry:
+            name='Henry'
+            buddy=None
+        class jenny:
+            name="Jenny"
+        jenny.buddy = henry
+    
+    # will also create an infinite loop :
+    ds = Pals()
+    eq_(ds.meta.references, [])
+    
         

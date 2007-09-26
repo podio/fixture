@@ -129,10 +129,9 @@ class MappedClassMedium(DBLoadableFixture.StorageMediumAdapter):
     def visit_loader(self, loader):
         self.session = loader.session
         
-    def save(self, row):
+    def save(self, row, column_vals):
         obj = self.medium()
-        for c in row.columns():
-            val = getattr(row, c)
+        for c, val in column_vals:
             setattr(obj, c, val)
         self.session.save(obj)
         # self.session.flush()
@@ -182,15 +181,14 @@ class TableMedium(DBLoadableFixture.StorageMediumAdapter):
                     self.__class__.__name__))
         self.connection = loader.connection
         
-    def save(self, row):
+    def save(self, row, column_vals):
         from sqlalchemy.schema import Table
         if not isinstance(self.medium, Table):
             raise ValueError(
                 "medium %s must be a Table instance" % self.medium)
                 
         stmt = self.medium.insert()
-        c = self.connection.execute(stmt, 
-                            dict([(c, getattr(row, c)) for c in row.columns()]))
+        c = self.connection.execute(stmt, dict(list(column_vals)))
         primary_key = c.last_inserted_ids()
         if primary_key is None:
             raise NotImplementedError(

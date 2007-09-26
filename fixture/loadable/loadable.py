@@ -291,15 +291,15 @@ You'll need to subclass at least `fixture.loadable.loadable:LoadableFixture`_, p
     ...             '''a chance to reference any attributes from the loader.
     ...                this is called before save().'''
     ... 
-    ...         def save(self, row):
+    ...         def save(self, row, column_vals):
     ...             '''save data into your object using the provided 
     ...                fixture.dataset.DataRow instance'''
     ...             # instantiate your real object class (Author), which was set 
     ...             # in __init__ to self.medium ...
     ...             obj = self.medium() 
-    ...             for c in row.columns():
+    ...             for c, val in column_vals:
     ...                 # column values become object attributes...
-    ...                 setattr(obj, c, getattr(row, c))
+    ...                 setattr(obj, c, val)
     ...             obj.save()
     ...             # be sure to return the object:
     ...             return obj
@@ -423,8 +423,11 @@ class LoadableFixture(Fixture):
                     raise UnloadError(etype, val, self.dataset, 
                                          stored_object=obj), None, tb
             
-        def save(self, row):
-            """given a DataRow, save it somehow."""
+        def save(self, row, column_vals):
+            """given a DataRow, save it somehow.
+            
+            column_vals is an iterable of (column_name, column_value)
+            """
             raise NotImplementedError
             
         def visit_loader(self, loader):
@@ -556,35 +559,45 @@ class LoadableFixture(Fixture):
         
         log.info("LOADING rows in %s", ds)
         ds.meta.storage_medium.visit_loader(self)
+        registered = False
         for key, row in ds:
             try:
-                self.resolve_row_references(row)
+                self.resolve_row_references(ds, row)
                 if not isinstance(row, DataRow):
                     row = row(ds)
-                obj = ds.meta.storage_medium.save(row)
+                def column_vals():
+                    for c in row.columns():
+                        yield (c, self.resolve_stored_object(getattr(row, c)))
+                obj = ds.meta.storage_medium.save(row, column_vals())
                 ds.meta._stored_objects.store(key, obj)
                 # save the instance in place of the class...
                 ds._setdata(key, row)
+                if not registered:
+                    self.loaded.register(ds, level)
+                    registered = True
                 
             except Exception, e:
                 etype, val, tb = sys.exc_info()
                 raise LoadError(etype, val, ds, key=key, row=row), None, tb
-        
-        self.loaded.register(ds, level)
     
-    def resolve_row_references(self, row):        
+    def resolve_row_references(self, current_dataset, row):        
         """resolve this DataRow object's referenced values.
         """
-        def stored_object_for_rowlike(rowlike):
+        def resolved_rowlike(rowlike):
+            key = rowlike.__name__
+            if rowlike._dataset is type(current_dataset):
+                return DeferredStoredObject(rowlike._dataset, key)
             loaded_ds = self.loaded[rowlike._dataset]
-            return loaded_ds.meta._stored_objects.get_object(rowlike.__name__)
+            return loaded_ds.meta._stored_objects.get_object(key)
         def resolve_stored_object(candidate):            
             if is_rowlike(candidate):
-                return stored_object_for_rowlike(candidate)
+                return resolved_rowlike(candidate)
             else:
-                raise TypeError(
-                    "multi-value columns can only contain "
-                    "rowlike objects, not %s" % candidate)
+                # then it is the stored object itself.  this would happen if 
+                # there is a reciprocal foreign key (i.e. organization has a 
+                # parent organization)
+                return candidate
+                
         for name in row.columns():
             val = getattr(row, name)
             if type(val) in (types.ListType, types.TupleType):
@@ -592,7 +605,7 @@ class LoadableFixture(Fixture):
                 setattr(row, name, map(resolve_stored_object, val))
             elif is_rowlike(val):
                 # i.e. category = python
-                setattr(row, name, stored_object_for_rowlike(val))
+                setattr(row, name, resolved_rowlike(val))
             elif isinstance(val, Ref.Value):
                 # i.e. category_id = python.id.
                 ref = val.ref
@@ -678,6 +691,12 @@ class EnvLoadableFixture(LoadableFixture):
                 "(perhaps your style object was not configured right?)" % (
                                         ds.__class__.__name__, ds.__class__))
         ds.meta.storage_medium = self.Medium(storable, ds)
+        
+    def resolve_stored_object(self, column_val):
+        if type(column_val)==DeferredStoredObject:
+            return column_val.get_stored_object_from_loader(self)
+        else:
+            return column_val
 
 class DBLoadableFixture(EnvLoadableFixture):
     """An abstract fixture that will be loadable into a database.
@@ -702,6 +721,38 @@ class DBLoadableFixture(EnvLoadableFixture):
     
     def rollback(self):
         self.transaction.rollback()
+
+class DeferredStoredObject(object):
+    """A stored representation of a row in a DatSet, deferred.
+    
+    The actual stored object can only be resolved by the StoredMediumAdapter 
+    itself
+    
+    Imagine...::
+    
+        >>> from fixture import DataSet
+        >>> class PersonData(DataSet):
+        ...     class adam:
+        ...         father=None
+        ...     class eve:
+        ...         father=None
+        ...     class jenny:
+        ...         pass
+        ...     jenny.father = adam
+        ... 
+    
+    This would be a way to indicate that jenny's father is adam.  This class 
+    will encapsulate that reference so it can be resolved as close to when it 
+    was created as possible.
+    
+    """
+    def __init__(self, dataset, key):
+        self.dataset = dataset
+        self.key = key
+    
+    def get_stored_object_from_loader(self, loader):
+        loaded_ds = loader.loaded[self.dataset]
+        return loaded_ds.meta._stored_objects.get_object(self.key)
 
 if __name__ == '__main__':
     import doctest
