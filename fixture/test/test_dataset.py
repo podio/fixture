@@ -1,7 +1,8 @@
 
 from nose.tools import with_setup, eq_, raises
 from fixture import DataSet
-from fixture.dataset import DataRow, SuperSet, MergedSuperSet
+from fixture.dataset import (
+    Ref, DataType, DataRow, SuperSet, MergedSuperSet, is_rowlike)
 from fixture.test import attr
 
 class Books(DataSet):
@@ -89,6 +90,7 @@ class DataSetTest:
             self.assert_row_dict_for_iter(k, items, count)
         
         self.assert_itered_n_times(count)
+                
 
 class TestDataSet(DataSetTest):
     def setUp(self):
@@ -111,6 +113,12 @@ class TestDataSet(DataSetTest):
         else:
             raise ValueError("unexpected row %s, count %s" % (items, count))
 
+class TestDataRow(object):
+    def test_datarow_is_rowlike(self):
+        dataset = {}
+        row = DataRow(dataset)
+        assert is_rowlike(row)
+
 class TestDataTypeDrivenDataSet(TestDataSet):
     def setUp(self):
         class Books(DataSet):
@@ -118,26 +126,49 @@ class TestDataTypeDrivenDataSet(TestDataSet):
                 title = 'lolita'
             class pi:
                 title = 'life of pi'
+        self.dataset_class = Books
         self.dataset = Books()
 
-class EventData(DataSet):
-    class click:
-        type = 'click'
-        session = 'aaaaaaa'
-        offer = 1
-        time = 'now'
+    @attr(unit=1)
+    def test_row_is_decorated_with_ref(self):
+        assert hasattr(self.dataset_class.lolita, 'ref'), (
+            "expected %s to be decorated with a ref method" % 
+            self.dataset_class.lolita)
+        assert self.dataset_class.lolita.ref.__class__==Ref, (
+            "unexpected ref class: %s" % 
+            self.dataset_class.lolita.ref.__class__)
     
-    class submit(click):
-        type = 'submit'
-    class order(click):
-        type = 'order'
-    class activation(click):
-        type = 'activation'
+    @attr(unit=1)
+    def test_row_is_rowlike(self):
+        assert is_rowlike(self.dataset_class.lolita), (
+            "expected %s to be rowlike" % self.dataset_class.lolita)
 
-class TestInheritedRows(DataSetTest):
-    def setUp(self):
-        self.dataset = EventData()
+@attr(unit=1)
+def test_is_rowlike():
+    class StubDataSet(DataSet):
+        class some_row:
+            pass
+    class StubDataSetNewStyle(DataSet):
+        class some_row(object):
+            pass
     
+    eq_(is_rowlike(StubDataSet.some_row), True)
+    eq_(is_rowlike(StubDataSetNewStyle.some_row), True)
+    stub_dataset = {}
+    eq_(is_rowlike(DataRow(stub_dataset)), True)
+    
+    class StubRow:
+        pass
+    class StubRowNewStyle(object):
+        pass
+    eq_(is_rowlike(StubRow), False)
+    eq_(is_rowlike(StubRowNewStyle), False)
+    
+    eq_(is_rowlike(1), False)
+    eq_(is_rowlike({}), False)
+    eq_(is_rowlike([]), False)
+
+class InheritedRowsTest(DataSetTest):    
     def assert_access(self, dataset):
         def assert_all_attr(type):
             fxt = getattr(dataset, type)
@@ -174,6 +205,39 @@ class TestInheritedRows(DataSetTest):
         else:
             raise ValueError("unexpected row %s at key %s, count %s" % (
                                                         items, key, count))
+class EventData(DataSet):
+    class click:
+        type = 'click'
+        session = 'aaaaaaa'
+        offer = 1
+        time = 'now'
+    
+    class submit(click):
+        type = 'submit'
+    class order(click):
+        type = 'order'
+    class activation(click):
+        type = 'activation'
+        
+class TestInheritedRows(InheritedRowsTest):
+    dataset = EventData()
+    
+class EventDataNewStyle(DataSet):
+    class click(object):
+        type = 'click'
+        session = 'aaaaaaa'
+        offer = 1
+        time = 'now'
+    
+    class submit(click):
+        type = 'submit'
+    class order(click):
+        type = 'order'
+    class activation(click):
+        type = 'activation'
+        
+class TestInheritedRowsWithNewStyle(InheritedRowsTest):
+    dataset = EventDataNewStyle()
 
 class TestDataSetCustomMeta(DataSetTest):
     def setUp(self):

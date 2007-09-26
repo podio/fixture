@@ -81,9 +81,8 @@ See the `DataSet.Meta`_ API for more info.
 
 """
 
-import sys
+import sys, types
 from fixture.util import ObjRegistry
-import types
 
 __all__ = ['DataSet']
 
@@ -205,7 +204,7 @@ def is_row_class(attr):
     return ((attr_type==types.ClassType or attr_type==type) and 
                 attr.__name__ != 'Meta' and 
                 not issubclass(attr, DataContainer.Meta))
-    
+
 class DataType(type):
     """meta class for creating DataSet classes."""
     default_primary_key = ['id']
@@ -228,6 +227,9 @@ class DataType(type):
         del cls_attr['_primary_key']
     
     def decorate_row(cls, row, name, bases, cls_attr):
+        # store a backref to the container dataset
+        row._dataset = cls
+        
         # bind a ref method
         row.ref = Ref(cls, row)
         
@@ -262,7 +264,16 @@ class DataType(type):
         if new_bases:
             row.__bases__ = tuple(new_bases)
             
-                    
+
+def is_rowlike(candidate):
+    """returns True if candidate is *like* a DataRow.
+    
+    Not to be confused with issubclass(candidate, DataRow).
+    
+    A regular or new-style class is row-like because DataSet objects allow any 
+    type of class to declare a row of data
+    """
+    return hasattr(candidate, '_dataset')
 
 class DataRow(object):
     """a DataSet row, values accessible by attibute or key."""
