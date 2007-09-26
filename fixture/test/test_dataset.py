@@ -115,9 +115,10 @@ class TestDataSet(DataSetTest):
 
 class TestDataRow(object):
     def test_datarow_is_rowlike(self):
-        dataset = {}
-        row = DataRow(dataset)
-        assert is_rowlike(row)
+        class StubDataSet(DataSet):
+            pass
+        row = DataRow(StubDataSet)
+        assert is_rowlike(row), "expected %s to be rowlike" % row
 
 class TestDataTypeDrivenDataSet(TestDataSet):
     def setUp(self):

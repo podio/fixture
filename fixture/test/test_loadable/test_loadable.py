@@ -214,13 +214,13 @@ class HavingReferencedOfferProduct:
         class ProductData(DataSet):
             class truck:
                 name = 'truck'
-                category_id = CategoryData.cars.ref('id')
+                category = CategoryData.cars
         
         class OfferData(DataSet):
             class free_truck:
                 name = "it's a free truck"
-                product_id = ProductData.truck.ref('id')
-                category_id = CategoryData.free_stuff.ref('id')
+                product = ProductData.truck
+                category = CategoryData.free_stuff
                 
         return [ProductData, OfferData]
         
@@ -238,13 +238,13 @@ class HavingRefInheritedOfferProduct:
         class ProductData(DataSet):
             class truck:
                 name = 'truck'
-                category_id = CategoryData.cars.ref('id')
+                category = CategoryData.cars
         
         class OfferData(DataSet):
             class free_truck:
                 name = "it's a free truck"
-                product_id = ProductData.truck.ref('id')
-                category_id = CategoryData.free_stuff.ref('id')
+                product = ProductData.truck
+                category = CategoryData.free_stuff
             class free_spaceship(free_truck):
                 id = 99
                 name = "it's a free spaceship"

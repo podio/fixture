@@ -212,10 +212,8 @@ class SQLAlchemyFixtureForKeysTest(SQLAlchemyFixtureTest):
         eq_(Offer.get(dataset.free_truck.id).name, dataset.free_truck.name)
         
         product = Product.query().join('category').get(dataset.truck.id)
-        # print [(c,c.products) for c in Category.select()]
-        # print product.category
         eq_(product.name, dataset.truck.name)
-        eq_(product.category_id, dataset.cars.id)
+        eq_(product.category.id, dataset.cars.id)
         
         category = Category.get(dataset.cars.id)
         eq_(category.name, dataset.cars.name)
