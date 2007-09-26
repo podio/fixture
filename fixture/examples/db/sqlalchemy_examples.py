@@ -209,7 +209,9 @@ if sqlalchemy:
     class Book(object):
         pass
 
-    mapper(Book, books)
+    mapper(Book, books, properties={
+        'author': relation(Author, backref='books')
+    })
 
 def setup_db(meta, session_context, **kw):
     assert sqlalchemy

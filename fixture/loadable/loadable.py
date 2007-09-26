@@ -3,7 +3,7 @@
 
 .. contents:: :local:
 
-After defining data with the DataSet class you need some way to load the data for your test.  Each DataSet you want to load needs some storage medium, say, a `Data Mapper`_ or `Active Record`_ object.  A Fixture is simply an environment that knows how to load data using the right objects.  It puts the pieces together, if you will.
+A DataSet class is loaded via some storage medium, say, an object that implements a `Data Mapper`_ or `Active Record`_ pattern.  A Fixture is an environment that knows how to load data using the right objects.  Behind the scenes, the rows and columns of the DataSet are simply passed off to the storage medium so that it can save the data.
 
 .. _Data Mapper: http://www.martinfowler.com/eaaCatalog/dataMapper.html
 .. _Active Record: http://www.martinfowler.com/eaaCatalog/activeRecord.html
@@ -11,15 +11,51 @@ After defining data with the DataSet class you need some way to load the data fo
 Supported storage media
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-To create a specific data-loading environment, the following subclasses are available:
+The Fixture class is designed to support many different types of storage media and there is a section later about creating your own Fixture.  Here are the various storage media supported by built-in Fixture subclasses:
 
-SQLAlchemyFixture
-    loads data using `Table`_ objects or `mapped classes`_ via the `sqlalchemy`_ 
-    module
-SQLObjectFixture
-    loads data using `SQLObject classes`_ via the `sqlobject`_ module
+SQLAlchemy
+++++++++++
 
-The idea is that your application already defines its own way of accessing its data; the LoadableFixture just "hooks in" to that interface.  Before considering the Fixture, here is an example data model defined using `sqlalchemy`_::
+DataSet classes can be loaded into `Table`_ objects or `mapped classes`_ via the `sqlalchemy`_ module::
+
+    >>> from fixture import SQLAlchemyFixture
+    
+    >>> from sqlalchemy import create_session
+    >>> from sqlalchemy.ext.sessioncontext import SessionContext
+    >>> from fixture.examples.db import sqlalchemy_examples
+    >>> dbfixture = SQLAlchemyFixture(
+    ...                 session_context=SessionContext(create_session), 
+    ...                 env=sqlalchemy_examples)
+    ... 
+
+For the more documentation see `SQLAlchemyFixture API`_
+
+Elixir
+++++++
+
+DataSet class can be loaded into `Elixir entities`_ by using the SQLAlchemyFixture (see previous example).
+
+SQLObject
++++++++++
+
+DataSet classes can be loaded into `SQLObject classes`_ via the `sqlobject`_ module::
+
+    >>> from fixture import SQLObjectFixture
+    
+    >>> from fixture.examples.db import sqlobject_examples
+    >>> dbfixture = SQLObjectFixture(
+    ...     dsn="sqlite:/:memory:", env=sqlobject_examples)
+    ... 
+
+For the more documentation see `SQLObjectFixture API`_.
+
+.. _SQLAlchemyFixture API: ../apidocs/fixture.loadable.sqlalchemy_loadable.SQLAlchemyFixture.html
+.. _SQLObjectFixture API: ../apidocs/fixture.loadable.sqlobject_loadable.SQLObjectFixture.html
+
+An Example Loading Data Using SQLAlchemy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Fixture is designed for applications that already define a way of accessing its data; the LoadableFixture just "hooks in" to that interface.  To start this example, here is some `sqlalchemy`_ code to set up a database of books and authors::
 
     >>> from sqlalchemy import *
     >>> engine = create_engine('sqlite:///:memory:')
@@ -43,20 +79,25 @@ The idea is that your application already defines its own way of accessing its d
     >>> class Book(object):
     ...     pass
     ... 
-    >>> mapper(Book, books) #doctest: +ELLIPSIS
+    >>> mapper(Book, books, properties={
+    ...     'author': relation(Author, backref='books')
+    ... }) #doctest: +ELLIPSIS
     <sqlalchemy.orm.mapper.Mapper object at ...>
     >>> meta.create_all()
+
+Consult the `sqlalchemy`_ documentation for further examples of data mapping.
 
 .. _sqlalchemy: http://www.sqlalchemy.org/
 .. _Table: http://www.sqlalchemy.org/docs/tutorial.myt#tutorial_schemasql_table_creating
 .. _mapped classes: http://www.sqlalchemy.org/docs/datamapping.myt
+.. _Elixir entities: http://elixir.ematia.de/
 .. _sqlobject: http://sqlobject.org/
 .. _SQLObject classes: http://sqlobject.org/SQLObject.html#declaring-the-class
 
 Defining a Fixture
 ~~~~~~~~~~~~~~~~~~
 
-Define a fixture object like so::
+This is a fixture with minimal configuration to support loading data into the Book or Author mapped classes::
 
     >>> from fixture import SQLAlchemyFixture
     >>> dbfixture = SQLAlchemyFixture(
@@ -64,10 +105,7 @@ Define a fixture object like so::
     ...     session=session )
     ... 
 
-For the available keyword arguments of respective LoadableFixture objects, see `SQLAlchemyFixture API`_ and `SQLObjectFixture API`_.
-
-.. _SQLAlchemyFixture API: ../apidocs/fixture.loadable.sqlalchemy_loadable.SQLAlchemyFixture.html
-.. _SQLObjectFixture API: ../apidocs/fixture.loadable.sqlobject_loadable.SQLObjectFixture.html
+There are several shortcuts, like `fixture.style.NamedDataStyle`_ and specifying the `session_context keyword`_.
 
 .. note::
     - Any keyword attribute of a LoadableFixture can be set later on as an 
@@ -75,27 +113,33 @@ For the available keyword arguments of respective LoadableFixture objects, see `
     - LoadableFixture instances can safely be module-level objects
     - An ``env`` can be a dict or a module
     
+.. _session_context keyword: ../apidocs/fixture.loadable.sqlalchemy_loadable.SQLAlchemyFixture.html
+.. _fixture.style.NamedDataStyle: ../apidocs/fixture.style.NamedDataStyle.html
+
 Loading DataSet objects
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-As mentioned earlier, a DataSet shouldn't have to know how to store itself; the job of the Fixture object is to load and unload DataSet objects.  Let's consider the following DataSet objects (reusing the examples from earlier)::
+The job of the Fixture object is to load and unload DataSet objects.  Let's consider the following DataSet objects (reusing the examples from earlier)::
 
     >>> from fixture import DataSet
     >>> class AuthorData(DataSet):
     ...     class frank_herbert:
-    ...         first_name="Frank"
-    ...         last_name="Herbert"
+    ...         first_name = "Frank"
+    ...         last_name = "Herbert"
     >>> class BookData(DataSet):
     ...     class dune:
     ...         title = "Dune"
-    ...         author_id = AuthorData.frank_herbert.ref('id')
+    ...         author = AuthorData.frank_herbert
 
-As you recall, we passed a dictionary into the Fixture that associates DataSet names with storage objects.  Using this dict, a Fixture.Data instance now knows to use the sqlalchemy mapped class ``Book`` when saving a DataSet named ``BookData``.  Since we also gave it a ``session`` keyword, this will be used to save objects::
+As you recall, we passed a dictionary into the Fixture that associates DataSet names with storage objects.  Using this dict, a Fixture.Data instance now knows to use the sqlalchemy mapped class ``Book`` when saving a DataSet named ``BookData``.  Since we also gave it a ``session`` keyword, this will be used to actually save objects::
     
     >>> data = dbfixture.data(AuthorData, BookData)
     >>> data.setup() 
-    >>> list(session.query(Book).select()) #doctest: +ELLIPSIS
+    >>> all_books = list(session.query(Book).select()) 
+    >>> all_books #doctest: +ELLIPSIS
     [<...Book object at ...>]
+    >>> all_books[0].author.first_name
+    'Frank'
     >>> data.teardown()
     >>> list(session.query(Book).select())
     []
@@ -550,7 +594,7 @@ class LoadableFixture(Fixture):
                 # i.e. category = python
                 setattr(row, name, stored_object_for_rowlike(val))
             elif isinstance(val, Ref.Value):
-                # i.e. category_id = python.id
+                # i.e. category_id = python.id.
                 ref = val.ref
                 # now the ref will return the attribute from a stored object 
                 # when __get__ is invoked
