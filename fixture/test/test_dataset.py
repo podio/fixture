@@ -114,6 +114,7 @@ class TestDataSet(DataSetTest):
             raise ValueError("unexpected row %s, count %s" % (items, count))
 
 class TestDataRow(object):
+    @attr(unit=True)
     def test_datarow_is_rowlike(self):
         class StubDataSet(DataSet):
             pass
