@@ -302,7 +302,7 @@ Now let's load some data into the custom Fixture using a simple ``env`` mapping:
 
 """
 # from __future__ import with_statement
-import sys
+import sys, types
 from fixture.base import Fixture
 from fixture.util import ObjRegistry, _mklog
 from fixture.style import OriginalStyle
@@ -530,18 +530,28 @@ class LoadableFixture(Fixture):
     
     def resolve_row_references(self, row):        
         """resolve this DataRow object's referenced values.
-        
-        return a row to replace the first one.  
-        by default it will return itself.
-        """            
-        for k in row.columns():
-            v = getattr(row, k)
-            if is_rowlike(v):
-                loaded_ds = self.loaded[v._dataset]
-                setattr(row, k, 
-                    loaded_ds.meta._stored_objects.get_object(v.__name__))
-            if isinstance(v, Ref.Value):
-                ref = v.ref
+        """
+        def stored_object_for_rowlike(rowlike):
+            loaded_ds = self.loaded[rowlike._dataset]
+            return loaded_ds.meta._stored_objects.get_object(rowlike.__name__)
+        def resolve_stored_object(candidate):            
+            if is_rowlike(candidate):
+                return stored_object_for_rowlike(candidate)
+            else:
+                raise TypeError(
+                    "multi-value columns can only contain "
+                    "rowlike objects, not %s" % candidate)
+        for name in row.columns():
+            val = getattr(row, name)
+            if type(val) in (types.ListType, types.TupleType):
+                # i.e. categories = [python, ruby]
+                setattr(row, name, map(resolve_stored_object, val))
+            elif is_rowlike(val):
+                # i.e. category = python
+                setattr(row, name, stored_object_for_rowlike(val))
+            elif isinstance(val, Ref.Value):
+                # i.e. category_id = python.id
+                ref = val.ref
                 # now the ref will return the attribute from a stored object 
                 # when __get__ is invoked
                 ref.dataset_obj = self.loaded[ref.dataset_class]

@@ -539,8 +539,8 @@ class DataSet(DataContainer):
                             add_ref_from_rowlike(c)
                         else:
                             raise TypeError(
-                                "unsupported type, %s, for multi-value "
-                                "column: %s" % (type(col_val), col_val))
+                                "multi-value columns can only contain "
+                                "rowlike objects, not %s" % col_val)
                 elif is_rowlike(col_val):
                     add_ref_from_rowlike(col_val)
                 elif isinstance(col_val, Ref.Value):

@@ -377,3 +377,39 @@ class TestDBLoadableRowReferences(object):
             ldr.loaded[PetData].meta._stored_objects.get_object('fido')
         eq_(fido_db_obj.owner, bob_db_obj)
         
+    @attr(unit=True)
+    def test_lists_of_row_refs_are_resolved(self):
+        calls = []
+        class MockDataObject(object):
+            def save(self):
+                calls.append((self.__class__, 'save'))
+        class Person(MockDataObject):
+            name = None
+        class Pet(MockDataObject):
+            owners = None
+        class PersonData(DataSet):
+            class bob:
+                name = "Bob B. Chillingsworth"
+            class stacy:
+                name = "Stacy Chillingsworth"
+        class PetData(DataSet):
+            class fido:
+                owners = [PersonData.bob, PersonData.stacy]
+            
+        ldr = StubLoadableFixture(
+            style=NamedDataStyle(), medium=MockStorageMedium, env=locals())
+        ldr.begin()
+        ldr.load_dataset(PetData())
+        
+        eq_(calls[0], (Person, 'save'))
+        eq_(calls[1], (Person, 'save'))
+        eq_(calls[2], (Pet, 'save'))
+        
+        bob_db_obj = \
+            ldr.loaded[PersonData].meta._stored_objects.get_object('bob')
+        stacy_db_obj = \
+            ldr.loaded[PersonData].meta._stored_objects.get_object('stacy')
+        fido_db_obj = \
+            ldr.loaded[PetData].meta._stored_objects.get_object('fido')
+        eq_(fido_db_obj.owners, [bob_db_obj, stacy_db_obj])
+        
