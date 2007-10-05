@@ -244,7 +244,8 @@ def setup_db(meta, session_context, **kw):
     assign_and_create(Category, categories)
     assign_and_create(Product, products, properties={
         'category': relation(Category),
-        'keywords':relation(Keyword, secondary=product_keywords, lazy=False)
+        'keywords':relation(Keyword, 
+            secondary=product_keywords, lazy=False)
     })
     assign_and_create(Offer, offers, properties={
         'category': relation(Category, backref='products'),

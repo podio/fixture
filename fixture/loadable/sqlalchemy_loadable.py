@@ -110,20 +110,46 @@ class MappedClassMedium(DBLoadableFixture.StorageMediumAdapter):
         
     def clearall(self):
         from sqlalchemy.orm.mapper import object_mapper
+        from sqlalchemy.orm import session
+        from sqlalchemy.orm.unitofwork import UOWTransaction
+        
+        uowtrans = UOWTransaction(self.session.uow, self.session)
         
         # log.info("CLEARING stored objects for %s", self.dataset)
         tables_to_clear = [] # must be ordered
         for obj in self.dataset.meta._stored_objects:
-            # iter all objects and children :
+            uowtrans.register_object(obj, isdelete=True)
             for c in [obj] + list(object_mapper(obj).cascade_iterator(
                                                         'delete', obj)):
-                # iter all mapped classes :
-                for mapper in object_mapper(
-                                    c).base_mapper().polymorphic_iterator():
+                for mapper in \
+                        object_mapper(c).base_mapper().polymorphic_iterator():
+                    # task = uowtrans.get_task_by_mapper(mapper)
+                    # for dep in task.polymorphic_dependencies:
+                    #     print dep
+                    # for t in task.polymorphic_todelete_elements:
+                    #     print t.obj
                     for table in mapper.tables:
                         table_pair = (mapper, table)
                         if table_pair not in tables_to_clear:
                             tables_to_clear.append(table_pair)
+                            
+        # from UOWTransaction.execute()
+        while True:
+            ret = False
+            for task in uowtrans.tasks.values():
+                for up in list(task.dependencies):
+                    if up.preexecute(uowtrans):
+                        ret = True
+            if not ret:
+                break
+        
+        head = uowtrans._sort_dependencies()
+        # print head
+        if head:
+            print head.dump()
+            # for elem in head.polymorphic_todelete_elements:
+            #     print elem
+        
         for mapper, table in tables_to_clear:
             self.session.execute(mapper, table.delete(), {})
     
@@ -132,6 +158,7 @@ class MappedClassMedium(DBLoadableFixture.StorageMediumAdapter):
     
     def visit_loader(self, loader):
         self.session = loader.session
+        self.transaction = loader.transaction
         
     def save(self, row, column_vals):
         obj = self.medium()
