@@ -67,6 +67,93 @@ class SQLAlchemyFixtureTest(object):
     def tearDown(self):
         teardown_db(self.meta, self.session_context)
 
+class TestSessionlessTeardown(SessionContextFixture, SQLAlchemyFixtureTest):
+    def datasets(self):
+        class CategoryData(DataSet):
+            class cars:
+                name = 'cars'
+            class free_stuff:
+                name = 'get free stuff'
+        
+        class ProductData(DataSet):
+            class truck:
+                name = 'truck'
+                category = CategoryData.cars
+        
+        class OfferData(DataSet):
+            class free_truck:
+                name = "it's a free truck"
+                product = ProductData.truck
+                category = CategoryData.free_stuff
+        return [CategoryData, ProductData, OfferData]
+        
+    def setUp(self):
+        if not conf.HEAVY_DSN:
+            raise SkipTest
+        super(TestSessionlessTeardown, self).setUp(dsn=conf.HEAVY_DSN)
+        
+    def test_clear_session_does_not_affect_teardown(self):
+        CategoryData, ProductData, OfferData = self.datasets()
+        data = self.fixture.data(CategoryData)
+        data.setup()
+        self.session_context.current.clear()
+        data.teardown()
+        c = Category.select()
+        eq_(len(c), 0, "unexpected records: %s" % c)
+    
+    def test_clear_session_and_parents_deleted(self):
+        CategoryData, ProductData, OfferData = self.datasets()
+        data = self.fixture.data(OfferData)
+        data.setup()
+        eq_(len(Category.select()), 2)
+        eq_(len(Product.select()), 1)
+        eq_(len(Offer.select()), 1)
+        self.session_context.current.clear()
+        data.teardown()
+        eq_(len(Category.select()), 0)
+        eq_(len(Product.select()), 0)
+        eq_(len(Offer.select()), 0)
+    
+    def test_explicit_delete_is_ignored(self):
+        CategoryData, ProductData, OfferData = self.datasets()
+        data = self.fixture.data(OfferData)
+        data.setup()
+        offer = Offer.get(data.free_truck.id)
+        assert offer
+        self.session_context.current.delete(offer)
+        self.session_context.current.flush()
+        data.teardown()
+        eq_(len(Category.select()), 0)
+        eq_(len(Product.select()), 0)
+        eq_(len(Offer.select()), 0)
+        
+    def test_swing_table_is_cleared_too(self):
+        class CategoryData(DataSet):
+            class cars:
+                name = 'cars'
+            class free_stuff:
+                name = 'get free stuff'
+        class KeywordData(DataSet):
+            class shiny:
+                keyword = "shiny"
+        class ProductData(DataSet):
+            class truck:
+                name = 'truck'
+                category = CategoryData.cars
+                keywords = [KeywordData.shiny]
+                
+        data = self.fixture.data(ProductData)
+        data.setup()
+        eq_(len(Category.select()), 2)
+        eq_(len(Product.select()), 1)
+        eq_(len(Keyword.select()), 1)
+        eq_(len(ProductKeyword.select()), 1)
+        data.teardown()
+        eq_(len(Category.select()), 0)
+        eq_(len(Product.select()), 0)
+        eq_(len(Keyword.select()), 0)
+        eq_(len(ProductKeyword.select()), 0)
+
 class SQLAlchemyCategoryTest(SQLAlchemyFixtureTest):
     def assert_data_loaded(self, dataset):
         eq_(Category.get( dataset.gray_stuff.id).name, 

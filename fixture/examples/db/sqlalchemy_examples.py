@@ -188,6 +188,24 @@ if sqlalchemy:
     )
     class Offer(object):
         pass
+    
+    keywords = Table("fixture_sqlalchemy_keyword",
+        Column("id", INT, primary_key=True),
+        Column("keyword", String ),
+    )
+    class Keyword(object):
+        pass
+    
+    product_keywords = Table("fixture_sqlalchemy_product_keyword",
+        Column('product_id', 
+            Integer, ForeignKey("fixture_sqlalchemy_product.id"),
+            primary_key=True),
+        Column('keyword_id', 
+            Integer, ForeignKey("fixture_sqlalchemy_keyword.id"),
+            primary_key=True),
+    )
+    class ProductKeyword(object):
+        pass
         
     dynamic_meta = DynamicMetaData()
     session = create_session(engine)
@@ -221,17 +239,19 @@ def setup_db(meta, session_context, **kw):
         sendkw.update(kw)
         assign_mapper(session_context, obj, table, **sendkw)
         checkfirst=False
-        import sys
         table.create(meta.engine, checkfirst=checkfirst)
     
     assign_and_create(Category, categories)
     assign_and_create(Product, products, properties={
         'category': relation(Category),
+        'keywords':relation(Keyword, secondary=product_keywords, lazy=False)
     })
     assign_and_create(Offer, offers, properties={
         'category': relation(Category, backref='products'),
         'product': relation(Product)
     })
+    assign_and_create(Keyword, keywords)
+    assign_and_create(ProductKeyword, product_keywords)
 
 def teardown_db(meta, session_context):
     import sqlalchemy

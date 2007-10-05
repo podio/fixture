@@ -104,27 +104,31 @@ class SQLAlchemyFixture(DBLoadableFixture):
     def rollback(self):
         DBLoadableFixture.rollback(self)
 
-def object_was_deleted(session, obj):
-    # hopefully there is a more future proof way to do this...
-    from sqlalchemy.orm.mapper import object_mapper
-    for c in [obj] + list(object_mapper(obj).cascade_iterator(
-                                                    'delete', obj)):
-        if c in session.deleted:
-            return True
-        elif not session.uow._is_valid(c):
-            # it must have been deleted elsewhere.  is there any other 
-            # reason for this scenario?
-            return True
-    return False
-
 class MappedClassMedium(DBLoadableFixture.StorageMediumAdapter):
     def __init__(self, *a,**kw):
         DBLoadableFixture.StorageMediumAdapter.__init__(self, *a,**kw)
         
-    def clear(self, obj):
-        if not object_was_deleted(self.session, obj):
-            self.session.delete(obj)
-        # self.session.flush()
+    def clearall(self):
+        from sqlalchemy.orm.mapper import object_mapper
+        
+        # log.info("CLEARING stored objects for %s", self.dataset)
+        tables_to_clear = [] # must be ordered
+        for obj in self.dataset.meta._stored_objects:
+            # iter all objects and children :
+            for c in [obj] + list(object_mapper(obj).cascade_iterator(
+                                                        'delete', obj)):
+                # iter all mapped classes :
+                for mapper in object_mapper(
+                                    c).base_mapper().polymorphic_iterator():
+                    for table in mapper.tables:
+                        table_pair = (mapper, table)
+                        if table_pair not in tables_to_clear:
+                            tables_to_clear.append(table_pair)
+        for mapper, table in tables_to_clear:
+            self.session.execute(mapper, table.delete(), {})
+    
+    # def clear(self, obj):
+    #     self.session.delete(obj)
     
     def visit_loader(self, loader):
         self.session = loader.session
@@ -134,7 +138,6 @@ class MappedClassMedium(DBLoadableFixture.StorageMediumAdapter):
         for c, val in column_vals:
             setattr(obj, c, val)
         self.session.save(obj)
-        # self.session.flush()
         return obj
         
 class TableMedium(DBLoadableFixture.StorageMediumAdapter):
