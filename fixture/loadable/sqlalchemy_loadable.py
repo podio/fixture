@@ -143,12 +143,12 @@ class MappedClassMedium(DBLoadableFixture.StorageMediumAdapter):
             if not ret:
                 break
         
-        head = uowtrans._sort_dependencies()
-        # print head
-        if head:
-            print head.dump()
-            # for elem in head.polymorphic_todelete_elements:
-            #     print elem
+        # head = uowtrans._sort_dependencies()
+        # # print head
+        # if head:
+        #     print head.dump()
+        #     # for elem in head.polymorphic_todelete_elements:
+        #     #     print elem
         
         for mapper, table in tables_to_clear:
             self.session.execute(mapper, table.delete(), {})

@@ -148,7 +148,13 @@ class TestSessionlessTeardown(SessionContextFixture, SQLAlchemyFixtureTest):
         eq_(len(Product.select()), 1)
         eq_(len(Keyword.select()), 1)
         eq_(len(ProductKeyword.select()), 1)
+        # self.meta.engine.echo = True
+        # product = Product.get(data.truck.id)
+        # sess = self.session_context.current
+        # sess.delete(product)
+        # sess.flush()
         data.teardown()
+        # self.meta.engine.echo = False
         eq_(len(Category.select()), 0)
         eq_(len(Product.select()), 0)
         eq_(len(Keyword.select()), 0)
