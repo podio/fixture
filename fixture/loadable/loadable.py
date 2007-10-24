@@ -518,6 +518,16 @@ class LoadableFixture(Fixture):
         if not unloading:
             self.loaded = self.LoadQueue()
     
+    def clear_object(self, obj):
+        """register an object to be cleared.
+        
+        often, an object that wasn't loaded explicitly
+        by the fixture needs to also be cleared, like a 
+        mapper to a swing table or just some random object
+        that was created during test execution.
+        """
+        raise NotImplementedError
+    
     def commit(self):
         raise NotImplementedError
     

@@ -80,6 +80,16 @@ class Fixture(object):
         def __getitem__(self, name):
             """self['name'] is self.data['name']"""
             return self.data[name]
+        
+        def clear_object(self, obj):
+            """register an object to be cleared.
+            
+            often, an object that wasn't loaded explicitly
+            by the fixture needs to also be cleared, like a 
+            mapper to a swing table or just some random object
+            that was created during test execution.
+            """
+            self.loader.clear_object(obj)
     
         def setup(self):
             """load all datasets, populating self.data."""

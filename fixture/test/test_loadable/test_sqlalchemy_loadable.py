@@ -126,8 +126,10 @@ class TestSessionlessTeardown(SessionContextFixture, SQLAlchemyFixtureTest):
         eq_(len(Category.select()), 0)
         eq_(len(Product.select()), 0)
         eq_(len(Offer.select()), 0)
-        
-    def test_swing_table_is_cleared_too(self):
+
+class TestSessionlessTeardownSwingTables(
+        SessionContextFixture, SQLAlchemyFixtureTest):
+    def datasets(self):
         class CategoryData(DataSet):
             class cars:
                 name = 'cars'
@@ -141,7 +143,15 @@ class TestSessionlessTeardown(SessionContextFixture, SQLAlchemyFixtureTest):
                 name = 'truck'
                 category = CategoryData.cars
                 keywords = [KeywordData.shiny]
-                
+        return [CategoryData, KeywordData, ProductData]
+        
+    def setUp(self):
+        if not conf.HEAVY_DSN:
+            raise SkipTest
+        super(TestSessionlessTeardownSwingTables, self).setUp(dsn=conf.HEAVY_DSN)
+        
+    def test_swing_table_is_cleared_too(self):     
+        CategoryData, KeywordData, ProductData = self.datasets()           
         data = self.fixture.data(ProductData)
         data.setup()
         eq_(len(Category.select()), 2)
@@ -155,6 +165,21 @@ class TestSessionlessTeardown(SessionContextFixture, SQLAlchemyFixtureTest):
         # sess.flush()
         data.teardown()
         # self.meta.engine.echo = False
+        eq_(len(Category.select()), 0)
+        eq_(len(Product.select()), 0)
+        eq_(len(Keyword.select()), 0)
+        eq_(len(ProductKeyword.select()), 0)
+        
+    def test_swing_table_can_be_cleared_explcitly(self):   
+        CategoryData, KeywordData, ProductData = self.datasets()           
+        data = self.fixture.data(ProductData)
+        data.setup()
+        eq_(len(Category.select()), 2)
+        eq_(len(Product.select()), 1)
+        eq_(len(Keyword.select()), 1)
+        eq_(len(ProductKeyword.select()), 1)
+        data.clear_object(ProductKeyword)
+        data.teardown()
         eq_(len(Category.select()), 0)
         eq_(len(Product.select()), 0)
         eq_(len(Keyword.select()), 0)

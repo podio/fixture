@@ -78,6 +78,9 @@ class SQLAlchemyFixture(DBLoadableFixture):
             self.connection = self.session.bind_to.connect()
         
         DBLoadableFixture.begin(self, unloading=unloading)
+        
+    def clear_object(self, obj):
+        raise NotImplementedError
     
     def commit(self):
         self.session.flush()
