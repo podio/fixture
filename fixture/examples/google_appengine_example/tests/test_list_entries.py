@@ -25,4 +25,4 @@ class TestListEntries(unittest.TestCase):
         assert EntryData.great_monday.body in response
         
         assert CommentData.monday_liked_it.comment in response
-        assert CommentData.mondays_suck.comment in response
+        assert CommentData.monday_sucked.comment in response

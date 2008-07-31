@@ -16,8 +16,8 @@ class CommentData(DataSet):
         comment = """\
 I'm so glad you have a blog because I want to know what you are doing everyday.  Heh, that sounds creepy.  What I mean is it's so COOL that you had a great Monday.  I like Mondays too.
 """
-    class mondays_suck:
+    class monday_sucked:
         entry = EntryData.great_monday
         comment = """\
-Are you serious?  Mannnnnn, Monday's really suck.
+Are you serious?  Mannnnnn, Monday really sucked.
 """

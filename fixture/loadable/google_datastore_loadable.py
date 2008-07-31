@@ -32,6 +32,8 @@ class GoogleDatastoreFixture(EnvLoadableFixture):
     
     >>> from fixture import GoogleDatastoreFixture
     
+    See :ref:`Using Fixture With Google App Engine <using-fixture-with-appengine>` for a complete example.
+    
     .. _Entity: http://code.google.com/appengine/docs/datastore/entitiesandmodels.html
     
     Keyword Arguments:
