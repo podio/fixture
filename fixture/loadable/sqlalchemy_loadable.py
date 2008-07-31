@@ -80,7 +80,7 @@ class SQLAlchemyFixture(DBLoadableFixture):
         A specific connection / engine to use when one is not bound.
     
     ``dataclass``
-        SuperSet to represent loaded data with
+        :class:`SuperSet <fixture.dataset.SuperSet>` class to represent loaded data with
     
     ``medium``
         A custom :class:`StorageMediumAdapter <fixture.loadable.loadable.StorageMediumAdapter>` 

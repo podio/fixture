@@ -53,7 +53,7 @@ class SQLObjectFixture(DBLoadableFixture):
         A dsn to create a connection with.
     
     ``dataclass``
-        SuperSet to represent loaded data with
+        :class:`SuperSet <fixture.dataset.SuperSet>` class to represent loaded data with
     
     ``medium``
         A custom :class:`StorageMediumAdapter <fixture.loadable.loadable.StorageMediumAdapter>` to instantiate when storing a DataSet.
