@@ -5,9 +5,9 @@
 Using Fixture To Test A Google App Engine Site
 ----------------------------------------------
 
-This tutorial looks at building and testing a simple Blog on `Google App Engine`_.  It shows how to use ``fixture`` to load objects into the `Datastore`_ and how to use 3rd party libraries to run tests in a sandboxed environment to mimic production.
+This article looks at building and testing a simple Blog on `Google App Engine`_.  It shows how to use ``fixture`` to load objects into the `Datastore`_ and how to use 3rd party libraries to run tests in a sandboxed environment to mimic production.
 
-The completed app can be found in the :ref:`fixture source code <download-fixture>` in ``fixture/examples/google_appengine_example/`` but some source code is illustrated herein.  The example was written with `Google App Engine SDK`_ 1.1.1 and fixture 1.1.0 but may work with other versions.
+The completed app can be found in the :ref:`fixture source code <download-fixture>` in ``fixture/examples/google_appengine_example/`` but portions of the source code are illustrated herein.  The example was written with `Google App Engine SDK`_ 1.1.1 and fixture 1.1.0 but may work with other versions.
 
 For a more general overview of Google App Engine, the `Getting Started <http://code.google.com/appengine/docs/gettingstarted/>`_ section of the docs may help.
 
@@ -19,7 +19,7 @@ For a more general overview of Google App Engine, the `Getting Started <http://c
 Creating a Simple Blog
 ----------------------
 
-To run the example you'll first need to install the `Google App Engine SDK`_.  In the app directory you'll see there is a simple app.yaml file that looks like::
+To run the example you'll first need to install the `Google App Engine SDK`_.  In the example directory you'll see there is a simple app.yaml file that looks like::
     
     application: pypi
     version: 1
@@ -62,7 +62,7 @@ However, the result won't be very exciting because there aren't any blog entries
 Load Some Initial Data
 ----------------------
 
-The ``fixture`` modules lets you define :class:`DataSet <fixture.dataset.DataSet>` classes and load them into a local datastore for automated or experimental testing.  Some sample data is defined in ``gblog/tests/datasets.py``::
+The ``fixture`` module lets you define :class:`DataSet <fixture.dataset.DataSet>` classes and load them into a local datastore for automated or experimental testing.  Some sample data is defined in ``gblog/tests/datasets.py``::
 
     from fixture import DataSet
 
@@ -93,7 +93,7 @@ The ``fixture`` modules lets you define :class:`DataSet <fixture.dataset.DataSet
 
 Using :class:`fixture.style.NamedDataStyle` these DataSet classes will map directly to the models defined above, ``Entry`` and ``Comment``, thus creating one new entry entitled "Monday Was Great" with two comments.
 
-To load this up so you can see it in the dev site, the example code includes a script named ``load_data_locally.py``.  The script sets up the App Engine sandbox then loads data with an instance of :class:`GoogleDatastoreFixture <fixture.loadable.google_datastore_loadable.GoogleDatastoreFixture>`::
+To load this up so you can see it in the dev site, the example code includes a script named ``load_data_locally.py``.  The script sets up the App Engine sandbox (code not shown) then loads data with an instance of :class:`GoogleDatastoreFixture <fixture.loadable.google_datastore_loadable.GoogleDatastoreFixture>`::
     
     from gblog import models
     from tests import datasets
