@@ -1,6 +1,8 @@
 """
 Components for loading and unloading data using the Google App Engine `Datastore`_.
 
+Added in version 1.1
+
 .. _Datastore: http://code.google.com/appengine/docs/datastore/
 
 """
@@ -51,6 +53,8 @@ class GoogleDatastoreFixture(EnvLoadableFixture):
         class to instantiate when storing a DataSet.
         By default, an Entity adapter will be used so you should only set a custom medium 
         if you know what you doing.
+    
+    Added in version 1.1
     """
     Medium = EntityMedium
     

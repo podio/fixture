@@ -6,7 +6,7 @@ import unittest
 import types
 import logging
 
-__all__ = ['DataTestCase', 'reset_log_level']
+__all__ = ['DataTestCase']
 
 class DataTestCase(object):
     """
@@ -116,7 +116,7 @@ def reset_log_level(level=logging.CRITICAL, channels=(
                                             "fixture.loadable",
                                             "fixture.loadable.tree")):
     """
-    Resets the log level on all fixture channels.
+    Resets the level on all fixture logs.
     
     You may need to call this when other applications 
     reset the root logger's log level.
@@ -124,6 +124,7 @@ def reset_log_level(level=logging.CRITICAL, channels=(
     Calling this with no args sets all logs to logging.CRITICAL
     which should keep them quiet
     
+    Added in version 1.1
     """
     for ch in channels:
         logging.getLogger(ch).setLevel(level)

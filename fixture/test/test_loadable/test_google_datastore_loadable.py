@@ -4,7 +4,8 @@ import os
 from nose.exc import SkipTest
 from nose.tools import eq_
 import unittest
-from fixture import reset_log_level, DataSet, TempIO, GoogleDatastoreFixture
+from fixture import DataSet, TempIO, GoogleDatastoreFixture
+from fixture.util import reset_log_level
 from fixture.test import conf, attr
 
 tmp = TempIO()
