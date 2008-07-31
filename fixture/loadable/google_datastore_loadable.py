@@ -1,3 +1,9 @@
+"""
+Components for loading and unloading data using the Google App Engine `Datastore`_.
+
+.. _Datastore: http://code.google.com/appengine/docs/datastore/
+
+"""
 
 from fixture.loadable import EnvLoadableFixture
 
@@ -11,7 +17,7 @@ class EntityMedium(EnvLoadableFixture.StorageMediumAdapter):
         obj.delete()
         
     def save(self, row, column_vals):
-        """Save this entity to the DB"""
+        """Save this entity to the Datastore"""
         entity = self.medium(
             **dict([(k,v) for k,v in column_vals])
         )
@@ -22,6 +28,8 @@ class GoogleDatastoreFixture(EnvLoadableFixture):
     """
     A fixture that knows how to load DataSet objects into Google Datastore `Entity`_ objects.
     
+    >>> from fixture import GoogleDatastoreFixture
+    
     .. _Entity: http://code.google.com/appengine/docs/datastore/entitiesandmodels.html
     
     Keyword Arguments:
@@ -30,7 +38,7 @@ class GoogleDatastoreFixture(EnvLoadableFixture):
         A :class:`Style <fixture.style.Style>` object to translate names with
     
     ``env``
-        A dict or module that contains Entity clasess.  This will be searched when 
+        A dict or module that contains Entity classes.  This will be searched when 
         :class:`Style <fixture.style.Style>` translates DataSet names into
         storage media.  See :meth:`EnvLoadableFixture.attach_storage_medium <fixture.loadable.loadable.EnvLoadableFixture.attach_storage_medium>` for details on 
         how ``env`` works.

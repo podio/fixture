@@ -36,6 +36,8 @@ class SQLAlchemyFixture(DBLoadableFixture):
     """
     A fixture that knows how to load DataSet objects into `SQLAlchemy`_ objects.
     
+    >>> from fixture import SQLAlchemyFixture
+    
     The recommended way to deal with connections is to either pass in your own engine object 
     or let `implicit binding`_ govern how connections are made.  This is because 
     ``SQLAlchemyFixture`` will use an internally scoped session to avoid conflicts 

@@ -38,6 +38,8 @@ class SQLObjectFixture(DBLoadableFixture):
     """
     A fixture that knows how to load DataSet objects via `SQLObject`_ classes.
     
+    >>> from fixture import SQLObjectFixture
+    
     Keyword Arguments:
     
     ``style``
