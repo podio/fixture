@@ -4,7 +4,7 @@ import os
 from nose.exc import SkipTest
 from nose.tools import eq_
 import unittest
-from fixture import DataSet, TempIO, GoogleDatastoreFixture
+from fixture import reset_log_level, DataSet, TempIO, GoogleDatastoreFixture
 from fixture.test import conf, attr
 
 tmp = TempIO()
@@ -34,7 +34,8 @@ def setup():
         raise SkipTest
 
 def teardown():
-    pass
+    # dev_appserver messes with the root logger...
+    reset_log_level()
 
 def clear_datastore():
     for basename in ("datastore.data", "history.data"):
