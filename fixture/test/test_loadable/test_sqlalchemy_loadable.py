@@ -24,6 +24,60 @@ def setup():
 def teardown():
     pass
 
+@attr(unit=1)
+def test_negotiated_medium():
+    class CategoryData(DataSet):
+        class cars:
+            name = 'cars'
+            
+    engine = create_engine(conf.LITE_DSN)
+    metadata.bind = engine
+    metadata.create_all()
+    
+    eq_(type(negotiated_medium(categories, CategoryData)), TableMedium)
+    eq_(is_table(categories), True)
+    
+    clear_mappers()
+    mapper(Category, categories)
+    
+    eq_(type(negotiated_medium(Category, CategoryData)), MappedClassMedium)
+    eq_(is_mapped_class(Category), True)
+    # hmmm
+    # eq_(is_assigned_mapper(Category), False)
+    
+    clear_mappers()
+    ScopedSession = scoped_session(get_transactional_session())
+    ScopedSession.mapper(Category, categories)
+    
+    eq_(type(negotiated_medium(Category, CategoryData)), MappedClassMedium)
+    eq_(is_mapped_class(Category), True)
+    eq_(is_assigned_mapper(Category), True)
+    
+@attr(unit=1)
+def test_negotiated_medium_05():            
+    if sa_major < 0.5:
+        raise SkipTest("Requires SQLAlchemy >= 0.5")
+        
+    class FooData(DataSet):
+        class foo:
+            name = 'foozilator'
+            
+    from sqlalchemy.ext.declarative import declarative_base
+    Base = declarative_base()
+    engine = create_engine(conf.LITE_DSN)
+
+    class DeclarativeFoo(Base):
+        __tablename__ = 'fixture_declarative_foo'
+        id = Column(Integer, primary_key=True)
+        name = Column(String)
+    
+    DeclarativeFoo.metadata.bind = engine
+    DeclarativeFoo.__table__.create()
+    try:
+        eq_(type(negotiated_medium(DeclarativeFoo, FooData)), MappedClassMedium)
+    finally:
+        DeclarativeFoo.__table__.drop()
+
 class TestSetupTeardown(unittest.TestCase):
     class CategoryData(DataSet):
         class cars:
