@@ -28,24 +28,10 @@ def default_json_converter(obj):
     raise TypeError("%r is not JSON serializable" % (obj,))
 
 def dataset_to_json(dataset, fp=None, default=default_json_converter):
-    """Converts a DataSet class or instance to 
+    """Converts a :class:`DataSet <fixture.dataset.DataSet>` class or instance to 
     JSON (JavaScript Object Notation).
     
-    The DataSet is converted to a list of dictionaries appearing in 
-    alphabetical order of row names.  The row names are ignored.
-    
-    Example::
-    
-        >>> from fixture import DataSet
-        >>> from fixture.dataset.converter import dataset_to_json
-        >>> class ArtistData(DataSet):
-        ...     class joan_jett:
-        ...         name = "Joan Jett and the Black Hearts"
-        ...     class ramones:
-        ...         name = "The Ramones"
-        ... 
-        >>> dataset_to_json(ArtistData)
-        '[{"name": "Joan Jett and the Black Hearts"}, {"name": "The Ramones"}]'
+    See :ref:`using-dataset-to-json` for detailed usage.
     
     Keyword Arguments
     
@@ -58,19 +44,22 @@ def dataset_to_json(dataset, fp=None, default=default_json_converter):
       A callable that takes one argument (an object) and returns output 
       suitable for JSON serialization.  This will *only* be called if the 
       object cannot be serialized.  For example::
-          
+        
         >>> def encode_complex(obj):
         ...     if isinstance(obj, complex):
         ...         return [obj.real, obj.imag]
         ...     raise TypeError("%r is not JSON serializable" % (o,))
         ...
+        >>> from fixture import DataSet
         >>> class ComplexData(DataSet):
         ...     class math_stuff:
         ...         complex = 2 + 1j
         ... 
         >>> dataset_to_json(ComplexData, default=encode_complex)
         '[{"complex": [2.0, 1.0]}]'
-
+    
+    Returns a JSON encoded string unless you specified the **fp** keyword
+    
     """
     assert json, (
         "You must have the simplejson or json module installed.  "
