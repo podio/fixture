@@ -146,6 +146,10 @@ documented.
 Changelog
 ---------
 
+- 1.2
+  
+  - Added support for DataSet to JSON conversion
+  
 - 1.1.2
   
   - Fixed bugs relating to SQLAlchemy 0.5 support (still not fully complete)
