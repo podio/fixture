@@ -4,7 +4,7 @@
 import datetime
 import decimal
 import types
-from fixture.dataset import DataRow
+from fixture.dataset import DataSet, DataRow
 json = None
 try:
     # 2.6
@@ -27,9 +27,9 @@ def default_json_converter(obj):
         return str(obj)
     raise TypeError("%r is not JSON serializable" % (obj,))
 
-def dataset_to_json(dataset, fp=None, default=default_json_converter):
-    """Converts a :class:`DataSet <fixture.dataset.DataSet>` class or instance to 
-    JSON (JavaScript Object Notation).
+def dataset_to_json(dataset, fp=None, default=default_json_converter, wrap=None):
+    """Converts a :class:`DataSet <fixture.dataset.DataSet>` class or 
+    instance to JSON (JavaScript Object Notation).
     
     See :ref:`using-dataset-to-json` for detailed usage.
     
@@ -58,6 +58,21 @@ def dataset_to_json(dataset, fp=None, default=default_json_converter):
         >>> dataset_to_json(ComplexData, default=encode_complex)
         '[{"complex": [2.0, 1.0]}]'
     
+    **wrap**
+      A callable that takes one argument, the list of dictionaries before 
+      they are converted to JSON.  For example::
+      
+        >>> def wrap_in_dict(objects):
+        ...     return {'data': objects}
+        ... 
+        >>> from fixture import DataSet
+        >>> class ColorData(DataSet):
+        ...     class red:
+        ...         color = "red"
+        ... 
+        >>> dataset_to_json(ColorData, wrap=wrap_in_dict)
+        '{"data": [{"color": "red"}]}'
+    
     Returns a JSON encoded string unless you specified the **fp** keyword
     
     """
@@ -68,6 +83,8 @@ def dataset_to_json(dataset, fp=None, default=default_json_converter):
         # we got a class so make it an instance
         # so that rows are resolved
         dataset = dataset()
+    if not isinstance(dataset, DataSet):
+        raise TypeError("First argument must be a class or instance of a DataSet")
     objects = []
     for name, row in _obj_items(dataset):
         try:
@@ -81,6 +98,8 @@ def dataset_to_json(dataset, fp=None, default=default_json_converter):
                 continue
             row_dict[col] = val
         objects.append(row_dict)
+    if wrap:
+        objects = wrap(objects)
     if fp:
         return json.dump(objects, fp, default=default)
     else:

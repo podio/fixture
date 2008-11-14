@@ -131,6 +131,18 @@ alphabetical order of inner class name.  Only the inner class
 attributes / values are used to create each dictionary.  
 The inner class names -- ``joan_jett``, etc -- are ignored.
 
+To customize the JSON you can also define the ``wrap`` keyword: a callable 
+that takes one argument, the list of dictionaries, and returns a new JSON 
+serializable object.  For example:
+
+.. doctest::
+    
+    >>> def wrap_in_dict(objects):
+    ...     return {'data': objects}
+    ... 
+    >>> dataset_to_json(ArtistData, wrap=wrap_in_dict) # doctest:+ELLIPSIS
+    '{"data": [{"name": "Joan Jett and the Black Hearts"}, ...]}'
+
 For all available keyword arguments, see API docs for :func:`dataset_to_json <fixture.dataset.converter.dataset_to_json>`.
 
 Customizing a Dataset

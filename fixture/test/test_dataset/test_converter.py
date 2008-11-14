@@ -32,6 +32,13 @@ class DummyError(Exception):
 class TestDatasetToJson(object):
     
     @attr(unit=1)
+    @raises(TypeError)
+    def test_must_be_dataset(self):
+        class NotADataSet(object):
+            pass
+        dataset_to_json(NotADataSet)
+    
+    @attr(unit=1)
     def test_convert_cls(self):
         eq_(dataset_to_json(FooData),
             json.dumps(
@@ -82,3 +89,18 @@ class TestDatasetToJson(object):
         assert not ds, (
             "dataset_to_json() should have died but it returned: %s" % ds)
             
+    @attr(unit=1)
+    def test_wrap(self):
+        
+        def wrap_in_dict(objects):
+            return {'data': objects}
+            
+        eq_(dataset_to_json(FooData, wrap=wrap_in_dict),
+            json.dumps({
+                'data':
+                    [{'name': "call me bar",
+                      'is_alive': False},
+                     {'name': "name's foo",
+                      'is_alive': True}]
+                }))
+                
