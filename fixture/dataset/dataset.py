@@ -8,6 +8,8 @@ few variations on it: :class:`SuperSet` and :class:`MergedSuperSet`
 
 import sys, types
 from fixture.util import ObjRegistry
+import threading
+thread_lock = threading.Lock()
 
 class DataContainer(object):
     """
@@ -162,9 +164,7 @@ class DataType(type):
             cls_attr['_primary_key'] = cls_attr['Meta'].primary_key
         else:
             cls_attr['_primary_key'] = cls.default_primary_key
-        
-        # just like dir(), we should do this in alpha order :
-        ## NOTE: dropping support for <2.4 here...
+            
         for name in sorted(cls_attr.keys()):
             attr = cls_attr[name]
             if is_row_class(attr):
@@ -249,9 +249,9 @@ class DataType(type):
             
 
 def is_rowlike(candidate):
-    """returns True if candidate is *like* a DataRow.
+    """returns True if candidate is *like* a Row.
     
-    Not to be confused with issubclass(candidate, DataRow).
+    Not to be confused with issubclass(candidate, Row).
     
     A regular or new-style class is row-like because DataSet objects allow any 
     type of class to declare a row of data
@@ -259,16 +259,38 @@ def is_rowlike(candidate):
     return hasattr(candidate, '_dataset') and type(candidate._dataset) in (
                                                             DataType, DataSet)
 
-class DataRow(object):
+class Row(object):
     """
     a DataSet row, values accessible by attibute or key.
     """
     _reserved_attr = ('columns',)
+    _shared_counter = 0
+    _local_order = 0
     
-    def __init__(self, dataset):
-        object.__setattr__(self, '_dataset', dataset)
-        # i.e. the name of the row class...
-        object.__setattr__(self, '_key', self.__class__.__name__)
+    @classmethod
+    def _get_order(cls):
+        thread_lock.acquire()
+        try:
+            cls._shared_counter += 1
+            return cls._shared_counter
+        finally:
+            thread_lock.release()
+    
+    def _set_key(self, key):
+        object.__setattr__(self, '_key', key)
+        # so it behaves like a class...
+        object.__setattr__(self, '__name__', key)
+    
+    def __init__(self, _dataset=None, _key=None, **kwargs):
+        self._local_order = self._get_order()
+        object.__setattr__(self, '_dataset', _dataset)
+        if _key is None:
+            # i.e. the name of the row class (legacy support)
+            # this may get overidden...
+            self._set_key(self.__class__.__name__)
+        
+        for k,v in kwargs.iteritems():
+            setattr(self, k, v)
     
     def __getitem__(self, item):
         """self['foo'] works the same as self.foo"""
@@ -369,7 +391,7 @@ class DataSetMeta(DataContainer.Meta):
         ... 
         
     """
-    row = DataRow
+    row = Row
     storable = None
     storable_name = None
     storage_medium = None
@@ -496,6 +518,15 @@ class DataSet(DataContainer):
         """yields keys of self.meta"""
         for key in self.meta.keys:
             yield (key, getattr(self, key))
+        
+    def _find_order_key(self, key):
+        v = getattr(self, key)
+        if isinstance(v, Row):
+            # in order of definition
+            return v._local_order
+        else:
+            # just like dir(), alpha order, when using inner classes
+            return key
     
     def data(self):
         """returns iterable key/dict pairs.
@@ -523,10 +554,11 @@ class DataSet(DataContainer):
             'Crow'
             
         """
+        
         if self.meta._built:
             for k,v in self:
                 yield (k,v)
-                
+            
         def public_dir(obj):
             for name in dir(obj):
                 if name.startswith("_"):
@@ -536,21 +568,23 @@ class DataSet(DataContainer):
         def add_ref_from_rowlike(rowlike):
             if rowlike._dataset not in self.meta.references:
                 self.meta.references.append(rowlike._dataset)
-                    
+        
         empty = True
         for name in public_dir(self.__class__):
             val = getattr(self.__class__, name)
-            if not is_row_class(val):
-                continue
-            
+            if not isinstance(val, Row):
+                # only allow rowlike objects :
+                if not is_row_class(val):
+                    continue
+        
             empty = False
             key = name
             row_class = val
             row = {}
-            
+        
             for col_name in public_dir(row_class):
                 col_val = getattr(row_class, col_name)
-                
+            
                 if isinstance(col_val, Ref):
                     # the .ref attribute
                     continue
@@ -570,10 +604,10 @@ class DataSet(DataContainer):
                     if ref.dataset_class not in self.meta.references:
                         # store the reference:
                         self.meta.references.append(ref.dataset_class)
-                    
+                
                 row[col_name] = col_val
             yield (key, row)
-            
+        
         if empty:
             raise ValueError("cannot create an empty DataSet")
         self.meta._built = True
@@ -729,7 +763,7 @@ class MergedSuperSet(SuperSet):
                             k, dataset, self.meta.keys_to_datasets[k]))
                 
                 # need an instance here, if it's a class...
-                if not isinstance(row, DataRow):
+                if not isinstance(row, Row):
                     row = row(dataset)
                 self._setdata(k, row)
                 self.meta.keys_to_datasets[k] = dataset 

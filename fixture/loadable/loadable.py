@@ -10,7 +10,7 @@ import sys, types
 from fixture.base import Fixture
 from fixture.util import ObjRegistry, _mklog
 from fixture.style import OriginalStyle
-from fixture.dataset import Ref, dataset_registry, DataRow, is_rowlike
+from fixture.dataset import Ref, dataset_registry, Row, is_rowlike
 from fixture.exc import LoadError, UnloadError, StorageMediaNotFound
 import logging
 
@@ -50,7 +50,7 @@ class StorageMediumAdapter(object):
                                      stored_object=obj), None, tb
         
     def save(self, row, column_vals):
-        """Given a DataRow, must save it somehow.
+        """Given a Row, must save it somehow.
         
         column_vals is an iterable of (column_name, column_value)
         """
@@ -226,7 +226,7 @@ class LoadableFixture(Fixture):
         for key, row in ds:
             try:
                 self.resolve_row_references(ds, row)
-                if not isinstance(row, DataRow):
+                if not isinstance(row, Row):
                     row = row(ds)
                 def column_vals():
                     for c in row.columns():
@@ -244,7 +244,7 @@ class LoadableFixture(Fixture):
                 raise LoadError(etype, val, ds, key=key, row=row), None, tb
     
     def resolve_row_references(self, current_dataset, row):        
-        """resolve this DataRow object's referenced values.
+        """resolve this Row object's referenced values.
         """
         def resolved_rowlike(rowlike):
             key = rowlike.__name__

@@ -25,7 +25,7 @@ fixture.dataset
    :show-inheritance:
    :members: decorate_row
    
-.. autoclass:: fixture.dataset.DataRow
+.. autoclass:: fixture.dataset.Row
    :show-inheritance:
    :members: 
    

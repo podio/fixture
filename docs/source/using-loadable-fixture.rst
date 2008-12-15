@@ -377,7 +377,7 @@ You'll need to subclass at least :class:`LoadableFixture <fixture.loadable.loada
     ... 
     ...         def save(self, row, column_vals):
     ...             '''save data into your object using the provided 
-    ...                fixture.dataset.DataRow instance'''
+    ...                fixture.dataset.Row instance'''
     ...             # instantiate your real object class (Author), which was set 
     ...             # in __init__ to self.medium ...
     ...             obj = self.medium() 

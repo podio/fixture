@@ -2,7 +2,7 @@
 from nose.tools import with_setup, eq_, raises
 from fixture import DataSet
 from fixture.dataset import (
-    Ref, DataType, DataRow, SuperSet, MergedSuperSet, is_rowlike)
+    Ref, DataType, Row, SuperSet, MergedSuperSet, is_rowlike)
 from fixture.test import attr
 
 class Books(DataSet):
@@ -113,13 +113,44 @@ class TestDataSet(DataSetTest):
         else:
             raise ValueError("unexpected row %s, count %s" % (items, count))
 
-class TestDataRow(object):
+class TestDataSetNewStyleOrdering(object):
+    
+    @attr(unit=True)
+    def test_row_ordering(self):
+        
+        class Foo(DataSet):
+            bar5 = Row(val=1)
+            bar4 = Row(val=1)
+            bar3 = Row(val=1)
+        
+        keys = [k for k in Foo()]
+        eq_(keys, ['bar5', 'bar4', 'bar3'])
+
+class TestRow(object):
     @attr(unit=True)
     def test_datarow_is_rowlike(self):
         class StubDataSet(DataSet):
             pass
-        row = DataRow(StubDataSet)
+        row = Row(StubDataSet)
         assert is_rowlike(row), "expected %s to be rowlike" % row
+    
+    @attr(unit=True)
+    def test_attr(self):
+        r = Row(foo=1, bar='two')
+        eq_(r.foo, 1)
+        eq_(r.bar, 'two')
+        eq_(r['foo'], 1)
+        eq_(r['bar'], 'two')
+    
+    @attr(unit=True)
+    def test_order(self):
+        
+        row5 = Row()
+        row4 = Row()
+        row3 = Row()
+        
+        assert sorted([row3, row4, row5], key=lambda r:r._local_order) == [row5, row4, row3], (
+            "Row() objects could not be sorted in the order they were defined in")
 
 class TestDataTypeDrivenDataSet(TestDataSet):
     def setUp(self):
@@ -156,7 +187,7 @@ def test_is_rowlike():
     
     eq_(is_rowlike(StubDataSet.some_row), True)
     eq_(is_rowlike(StubDataSetNewStyle.some_row), True)
-    eq_(is_rowlike(DataRow(StubDataSet)), True)
+    eq_(is_rowlike(Row(StubDataSet)), True)
     
     class StubRow:
         pass

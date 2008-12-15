@@ -17,7 +17,7 @@ class DataSetActionException(Exception):
         Key on DataSet row if there is one
         
     ``row``
-        :class:`DataRow <fixture.dataset.DataRow>` if there is one
+        :class:`Row <fixture.dataset.Row>` if there is one
         
     ``stored_object``
         Stored object if there is one

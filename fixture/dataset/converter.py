@@ -4,7 +4,7 @@
 import datetime
 import decimal
 import types
-from fixture.dataset import DataSet, DataRow
+from fixture.dataset import DataSet, Row
 json = None
 try:
     # 2.6
@@ -88,13 +88,14 @@ def dataset_to_json(dataset, fp=None, default=default_json_converter, wrap=None)
     objects = []
     for name, row in _obj_items(dataset):
         try:
-            if not issubclass(row, DataRow):
+            if not issubclass(row, Row):
                 continue
         except TypeError:
             continue
         row_dict = {}
         for col, val in _obj_items(row):
-            if col=='_reserved_attr' or callable(val):
+            # don't want to use dataset attributes starting with an underscore
+            if col.startswith('_') or callable(val):
                 continue
             row_dict[col] = val
         objects.append(row_dict)
