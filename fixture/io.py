@@ -137,7 +137,7 @@ def putfile(filename, contents, filelike=None, mode=None):
     filelike.write(contents)
     filelike.close()
     
-class DirPath(str, object):
+class DirPath(str):
     """a directory path.
     
     The instance will function exactly like a string but is enhanced with a few 
@@ -146,8 +146,6 @@ class DirPath(str, object):
     applications.
     
     """
-    def __init__(self, path):
-        str.__init__(self, path)
         
     def __setattr__(self, name, val):
         """self.new_directory = "rel/path/to/directory" 
