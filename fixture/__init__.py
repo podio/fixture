@@ -92,7 +92,7 @@ undiscovered bugs so please don't hesitate to
 
 """
 
-__version__ = "0.9.1"
+__version__ = "0.9.2"
 
 import logging
 import sys
