@@ -69,7 +69,7 @@ No documentation yet
 
 """
 
-import sys, os, optparse, inspect, pkg_resources
+import sys, os, optparse, inspect, pkg_resources, pprint
 from warnings import warn
 from fixture.command.generate.template import templates, is_template
 handler_registry = []
@@ -195,7 +195,7 @@ class DataSetGenerator(object):
             tpl['fxt_class'] = self.handler.mk_class_name(kls)
             
             val_dict = self.cache.registry[kls]
-            for k,fset in val_dict.items():
+            for k,fset in sorted(val_dict.items()):
                 key = fset.mk_key()
                 data = self.handler.resolve_data_dict(datadef, fset)
                 tpl['data'].append((key, self.template.dict(data)))
