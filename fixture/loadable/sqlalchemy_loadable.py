@@ -324,7 +324,7 @@ class TableMedium(DBLoadableFixture.StorageMediumAdapter):
             c = self.conn.execute(stmt, params)
         else:
             c = stmt.execute(params)
-        primary_key = c.last_inserted_ids()
+        primary_key = c.inserted_primary_key
         if primary_key is None:
             raise NotImplementedError(
                     "what can we do with a None primary key?")
