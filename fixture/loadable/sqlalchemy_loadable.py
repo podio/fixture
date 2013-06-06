@@ -225,6 +225,9 @@ class MappedClassMedium(DBLoadableFixture.StorageMediumAdapter):
 
     def clear(self, obj):
         """Delete this object from the session"""
+        if obj not in self.session:
+            # detached object; merge it with the one stored in session
+            obj = self.session.merge(obj, load=False)
         self.session.delete(obj)
 
     def visit_loader(self, loader):
