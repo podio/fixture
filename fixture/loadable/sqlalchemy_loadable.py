@@ -225,10 +225,12 @@ class MappedClassMedium(DBLoadableFixture.StorageMediumAdapter):
 
     def clear(self, obj):
         """Delete this object from the session"""
+        from sqlalchemy.orm.util import has_identity
         if obj not in self.session:
             # detached object; merge it with the one stored in session
-            obj = self.session.merge(obj, load=False)
-        self.session.delete(obj)
+            obj = self.session.merge(obj)
+        if has_identity(obj):
+            self.session.delete(obj)
 
     def visit_loader(self, loader):
         """Visits the :class:`SQLAlchemyFixture` loader and stores a reference to its session"""
