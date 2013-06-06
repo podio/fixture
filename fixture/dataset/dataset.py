@@ -286,6 +286,9 @@ class DataRow(object):
         obj = self._dataset.meta._stored_objects.get_object(self._key)
         return getattr(obj, name)
 
+    def stored_object(self):
+        return self._dataset.meta._stored_objects.get_object(self._key)
+
     @classmethod
     def columns(self):
         """Classmethod that yields all attribute names (except reserved attributes) 
